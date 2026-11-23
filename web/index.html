@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <title>Oye — Studio 44.2</title>
+  <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/training44.css">
+  <script src="/app.js" defer></script>
+  <script src="/training44.js" defer></script>
+  <script src="/studio37.js" defer></script><script src="/teach-screen.js" defer></script>
+</head>
+<body>
+  <div class="ambient-glow ambient-one" aria-hidden="true"></div><div class="ambient-glow ambient-two" aria-hidden="true"></div>
+  <div class="shell">
+    <aside class="sidebar" aria-label="Navigazione">
+      <div class="brand"><div class="brand-symbol">O<span>·</span></div><div><b>oye</b><small>WEB STUDIO / 44.2</small></div></div>
+      <div class="side-label">CONTROLLO</div>
+      <nav class="navigation" aria-label="Sezioni">
+        <button class="nav-item selected" data-tab="home"><span class="nav-icon">◩</span><span>Panoramica</span><span class="nav-arrow">↗</span></button>
+        <button class="nav-item" data-tab="calibrate"><span class="nav-icon">⌗</span><span>Insegna a Oye</span><span class="nav-arrow">↗</span></button>
+        <button class="nav-item" data-tab="screen"><span class="nav-icon">▧</span><span>Schermate e OCR</span><span class="nav-arrow">↗</span></button>
+        <a class="nav-item" id="open-scanner" href="/scanners"><span class="nav-icon">⌗</span><span>Scanner modulari v40</span><span class="nav-arrow">↗</span></a>
+        <div class="nav-group-label">I TUOI DATI</div>
+        <button class="nav-item" data-tab="archive"><span class="nav-icon">▦</span><span>Le mie partite</span><span class="nav-arrow">↗</span></button>
+        <button class="nav-item" data-tab="timeline"><span class="nav-icon">◫</span><span>Timeline editor</span><span class="nav-arrow">↗</span></button>
+        <div class="nav-group-label">SISTEMA</div>
+        <button class="nav-item" data-tab="settings"><span class="nav-icon">☷</span><span>Impostazioni</span><span class="nav-arrow">↗</span></button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="side-marker"><span class="live-dot"></span><span>100% LOCALE</span></div>
+        <p>Nessun account. Nessun server esterno. Tutti i dati rimangono sul PC.</p>
+        <span class="sidebar-version">STUDIO 44.2 / WEB-FIRST</span>
+      </div>
+    </aside>
+
+    <div class="main-shell">
+      <header class="topbar">
+        <div class="crumbs">OYE <span>/</span> <strong id="breadcrumb">PANORAMICA</strong></div>
+        <div class="top-actions"><span id="connection" class="top-connection"><i></i> Connessione locale</span><div class="top-version">WINDOWS 10 / 11</div></div>
+      </header>
+
+      <main>
+        <section id="page-home" class="page active">
+          <div class="page-heading">
+            <div><p class="eyebrow"><span class="eyebrow-spark"></span> OYE ENGINE / SESSION CENTER</p><h1>Oye gioca.<br><em>Sullo schermo. In movimento.</em></h1><p class="intro">Ignorante aspetta che GIOCA scompaia. Poi 120 secondi di caricamento, 2–2,5 minuti di soli salti e infine esplorazione WASD. Nessuna partenza anticipata.</p></div>
+            <div class="status-chip" id="header-status"><span class="status-light"></span><span id="status-text">IN ATTESA</span></div>
+          </div>
+
+          <div class="dashboard-grid">
+            <div class="left-stack">
+              <section class="preview-card"><div class="scan-line" aria-hidden="true"></div>
+                <div class="panel-head"><span class="small-title">01 / SCHERMO IN DIRETTA</span><span class="meta" id="frame-label">NESSUN SEGNALE</span></div>
+                <div class="preview-area">
+                  <div class="preview-placeholder" id="preview-placeholder"><div class="reticle"><span></span><span></span></div><b>ANTEPRIMA IN ATTESA</b><p>Apri Fortnite e avvia una sessione per visualizzare i fotogrammi.</p></div>
+                  <img id="live-frame" class="live-frame" alt="Ultimo fotogramma acquisito da Fortnite" hidden>
+                  <div class="preview-corner corner-tl"></div><div class="preview-corner corner-tr"></div><div class="preview-corner corner-bl"></div><div class="preview-corner corner-br"></div>
+                  <div class="preview-overlay"><span class="view-tag"><span class="view-ring"></span> <span id="view-phase">NESSUNA SESSIONE</span></span><span class="view-label">OYE / OBSERVER</span></div>
+                </div>
+                <div class="preview-bottom"><span><i class="tiny-led"></i> <span id="ocr-phase">OCR: in attesa</span></span><span id="hud-reading">HUD da verificare</span></div>
+              </section>
+
+              <section class="action-card">
+                <div class="panel-head"><span class="small-title">02 / COSA STA FACENDO</span><span class="meta">TEMPO REALE</span></div>
+                <div class="action-content"><div class="action-icon">↗</div><div><span class="small-muted">ULTIMO COMANDO</span><h2 id="current-action">Nessuna azione</h2><p id="action-reason">La sessione non è ancora stata avviata.</p></div></div>
+                <div class="action-footer"><span>STATO INPUT</span><span id="input-message">Nessun input inviato</span></div>
+              </section>
+            </div>
+
+            <div class="right-stack">
+              <section class="launch-card">
+                <div class="launch-top"><div class="launch-number">PLAY<span> / SESSIONE</span></div><div class="circle-mark"><span class="orbit-dot"></span>◎</div></div>
+                <p class="launch-eyebrow">SELEZIONA LA MODALITÀ</p>
+                <label class="sr-only" for="mode-select">Modalità di esecuzione</label>
+                <select id="mode-select">
+                  <option value="quick_cycle">Ignorante · Gioca → 120 s → salti → WASD</option>
+                  <option value="auto_cycle">Ciclo continuo · automatico</option>
+                  <option value="single_match">Una partita · poi stop</option>
+                  <option value="observe">Osserva soltanto</option>
+                  <option value="train">Insegnamento facile · gioco io, Oye registra</option>
+                  <option value="guided">Esplora e piccona</option>
+                </select>
+                <p id="mode-description" class="mode-description">Aspetta GIOCA visibile. Quando scompare per tre immagini, attende 120 s, poi salta per 120–150 s e infine si muove.</p>
+                <div id="readiness-line" class="readiness-line"><span class="readiness-indicator"></span><span>Controllo configurazione…</span></div>
+                <button id="show-me-home" class="teach-home-btn">INSEGNAMI I PULSANTI · FAMMELO VEDERE ↗</button><button id="easy-train-home" class="teach-home-btn">INSEGNAMI COME GIOCARE · MODALITÀ FACILE ↗</button>
+                <button id="start-btn" class="primary-btn">AVVIA IGNORANTE <span>↗</span></button>
+                <div class="control-row"><button class="outline-btn" id="pause-btn" disabled>Ⅱ <span>PAUSA</span></button><button class="outline-btn stop" id="stop-btn" disabled>■ <span>STOP</span></button></div>
+                <p class="launch-tip">Input LIVE solo con conferma. F8 pausa, F9 arresta. Per controllare il gioco, torna alla finestra Fortnite.</p>
+              </section>
+
+              <section class="keys-card">
+                <div class="panel-head"><span class="small-title">03 / CONTROLLI</span><span class="meta">TASTIERA + MOUSE</span></div>
+                <div class="keyboard-display"><div class="keyboard-move"><div class="key-cap spacer-key"></div><div class="key-cap" data-key="w">W</div><div class="key-cap spacer-key"></div><div class="key-cap" data-key="a">A</div><div class="key-cap" data-key="s">S</div><div class="key-cap" data-key="d">D</div></div><div class="mouse-display"><div class="mouse-symbol"><div class="mouse-half" id="mouse-left"></div><div class="mouse-half" id="mouse-right"></div><span></span></div><div class="mouse-legends"><span><i></i> SX</span><span><i></i> DX</span></div></div></div>
+                <div class="keys-legend"><span>WASD · MOVIMENTO</span><span>CLIC SX · AZIONE</span><span>CLIC DX · SECONDARIO</span></div>
+              </section>
+
+              <section class="training-status-card" aria-live="polite">
+                <div><span class="small-title">ARCHIVIO APPRENDIMENTO</span><strong id="training-count">Controllo dati…</strong></div>
+                <span id="training-state">I vecchi screenshot e i training restano in questa cartella.</span>
+              </section>
+              <section class="mini-card"><div><span class="small-title">PARTITE COMPLETATE</span><strong id="matches-completed">0</strong></div><div class="mini-sep"></div><div><span class="small-title">FASE ATTUALE</span><strong id="mini-phase">—</strong></div><div class="mini-sep"></div><div><span class="small-title">TELECAMERA</span><strong id="mini-camera">Non testata</strong></div></section>
+            </div>
+          </div>
+
+          <section id="diagnostic-panel" class="diagnostic-panel" aria-live="polite" hidden>
+            <div class="diagnostic-symbol">!</div><div class="diagnostic-copy"><span class="small-title">OYE HA BISOGNO DI ATTENZIONE</span>
+            <strong id="diagnostic-title">Problema da verificare</strong><p id="diagnostic-next">Controlla i messaggi della sessione.</p></div>
+            <button id="diagnostic-help-btn" class="small-action">FAMMELO VEDERE</button>
+          </section>
+          <section class="activity-panel"><div class="panel-head"><span class="small-title">04 / REGISTRO EVENTI</span><span class="meta">ULTIMI 15</span></div><div class="event-list" id="event-list"><div class="event-empty">Gli eventi della partita compariranno qui.</div></div></section>
+        </section>
+
+        <section id="page-calibrate" class="page">
+          <section class="easy-teach-card" aria-label="Insegnamento semplice delle mosse">
+            <div class="easy-teach-header"><span class="easy-teach-icon">▶</span><div><span class="small-title">MODALITÀ FACILE / INSEGNAGLI LE MOSSE</span><h2>Gioca tu. Oye osserva.</h2><p>Tre passaggi, senza timeline: registra mentre usi WASD, Spazio e clic sinistro. Non invia nessun comando durante la registrazione.</p></div></div>
+            <div class="easy-teach-steps"><span><b>01</b> Registra</span><span><b>02</b> Gioca tu</span><span><b>03</b> Rivedi le mosse</span></div>
+            <div class="easy-teach-buttons"><button id="easy-train-start" class="primary-btn compact-button">REGISTRA LE MIE MOSSE <span>↗</span></button><button id="easy-train-stop" class="small-action" disabled>TERMINA REGISTRAZIONE</button><button id="easy-train-confirm" class="small-action">RIVEDI LE MOSSE <span>↗</span></button></div>
+            <p id="easy-train-status" class="easy-teach-status" role="status">Oye registra soltanto i controlli consentiti con Fortnite in primo piano. Gli esempi incerti non vengono approvati automaticamente.</p>
+          </section>
+          <section class="training44" id="training44" aria-label="Revisione guidata delle dimostrazioni">
+            <header class="training44-head">
+              <div><p class="small-title">TRAINING / REVISORE GUIDATO</p><h2>Insegnagli senza la timeline.</h2><p>Oye seleziona le mosse da verificare. Tu controlli lo screenshot, confermi, correggi o scarti. I dati restano in SQLite.</p></div>
+              <button class="training44-refresh" id="training44-refresh" type="button" title="Ricarica la registrazione">↻ AGGIORNA</button>
+            </header>
+            <div class="training44-toolbar">
+              <label>REGISTRAZIONE <select id="training44-session" aria-label="Registrazione da rivedere"><option value="">Ultima registrazione</option></select></label>
+              <label>ESEMPI <select id="training44-filter" aria-label="Filtro esempi"><option value="pending">Da rivedere</option><option value="all">Tutti</option></select></label>
+              <div class="training44-policy" id="training44-policy">Caricamento…</div>
+            </div>
+            <div class="training44-pages"><button type="button" id="training44-first" disabled>← PRIMI ESEMPI</button><span id="training44-page-label">—</span><button type="button" id="training44-more" disabled>ALTRI ESEMPI →</button></div>
+            <div class="training44-metrics" aria-live="polite">
+              <div><strong id="training44-usable">—</strong><small>Utilizzabili</small></div>
+              <div><strong id="training44-pending">—</strong><small>Da rivedere</small></div>
+              <div><strong id="training44-rejected">—</strong><small>Esclusi</small></div>
+              <div><strong id="training44-actions">—</strong><small>Azioni diverse</small></div>
+            </div>
+            <div class="training44-review" id="training44-review" hidden>
+              <div class="training44-shot"><img id="training44-image" alt="Screenshot della mossa registrata" hidden><div id="training44-noimage" class="training44-noimage">Screenshot non disponibile</div></div>
+              <div class="training44-inspector">
+                <p class="small-title">ESEMPIO REGISTRATO <span id="training44-index"></span></p>
+                <h3 id="training44-frame">—</h3>
+                <p class="training44-scene" id="training44-scene">—</p>
+                <label>AZIONE EFFETTIVA <select id="training44-action" aria-label="Azione corretta"></select></label>
+                <p class="training44-help" id="training44-help">Controlla lo screenshot prima di confermare.</p>
+                <div class="training44-buttons">
+                  <button type="button" class="training44-accept" id="training44-accept">✓ ERA IN PARTITA · CONFERMA</button>
+                  <button type="button" class="training44-exclude" id="training44-exclude">✕ SCARTA ESEMPIO</button>
+                  <button type="button" class="training44-skip" id="training44-skip">SALTA PER ORA →</button>
+                  <button type="button" class="training44-reset" id="training44-reset" hidden>RIPRISTINA ESEMPIO</button>
+                </div>
+              </div>
+            </div>
+            <div class="training44-empty" id="training44-empty">Nessuna dimostrazione da rivedere. Premi «Registra le mie mosse» per crearne una.</div>
+            <p class="training44-footnote">La conferma rende idonei solo gli esempi che hai verificato. Non garantisce che una mossa venga eseguita in Fortnite: la policy conserva soglie di somiglianza e controlli di stato.</p>
+          </section>
+          <div class="page-heading compact"><div><p class="eyebrow">INSEGNA A OYE</p><h1>Fammelo vedere<span class="period">.</span></h1><p class="intro">Non devi configurare nulla a mano. Mostra a Oye cosa manca e indicaglielo soltanto se non riesce a trovarlo da solo. Puoi usare anche «Osserva soltanto» mentre giochi tu, per insegnare i riferimenti dell'HUD.</p></div><div class="step-pill" id="cal-progress">VERIFICA IN CORSO</div></div>
+          <section id="teach-card" class="teach-card" aria-live="polite">
+            <div class="teach-meta"><span class="teach-pulse"></span><span id="teach-state">OYE / IMPARA DA TE</span><span id="teach-count">—</span></div>
+            <div class="teach-body"><div class="teach-copy"><p class="teach-overline">ORA MI SERVE</p><h2 id="teach-heading">Controllo cosa manca…</h2><p id="teach-instruction">Oye controllerà i riferimenti e ti dirà cosa mostrargli.</p><div id="teach-message" class="teach-message">Quando sei pronto, premi «Fammelo vedere».</div>
+              <div class="teach-actions"><button id="teach-capture-btn" class="primary-btn teach-capture">FAMMELO VEDERE <span>↗</span></button><label for="upload-input" id="teach-upload-btn" class="small-action teach-upload">HO UNO SCREENSHOT</label></div>
+              <div class="teach-text-entry" id="teach-text-entry"><label for="teach-text-value">TESTO DEL RIFERIMENTO (FACOLTATIVO)</label><div class="teach-text-row"><select id="teach-text-target" aria-label="Pulsante da insegnare"><option value="gioca">Gioca</option><option value="torna_lobby">Torna alla lobby</option><option value="continua">Continua</option><option value="gioca_di_nuovo">Gioca di nuovo</option><option value="reward_title">Ricompensa ottenuta</option><option value="riscatta">Riscatta</option></select><input id="teach-text-value" type="text" maxlength="120" placeholder="Es. Ritorna alla lobby"><button id="teach-save-text-btn" class="small-action">SALVA TESTO</button></div><p>Puoi mostrare uno di questi pulsanti quando compare. Oye cerca anche parole parziali nella sua posizione.</p><div class="teach-targets"><button data-menu-teach="gioca">MOSTRAMI GIOCA</button><button data-menu-teach="torna_lobby">MOSTRAMI TORNA ALLA LOBBY</button><button data-menu-teach="continua">MOSTRAMI CONTINUA</button><button data-menu-teach="gioca_di_nuovo">MOSTRAMI GIOCA DI NUOVO</button><button data-menu-teach="reward_title">MOSTRAMI RICOMPENSA OTTENUTA</button><button data-menu-teach="riscatta">MOSTRAMI RISCATTA</button></div></div>
+              <div class="teach-secondary"><button id="teach-later-btn" class="teach-link">Lo mostro più tardi</button><button id="teach-manual-btn" class="teach-link">Non lo trovi? Seleziona manualmente</button><button id="teach-home-btn" class="teach-link" hidden>Torna alla panoramica</button></div>
+            </div><div class="teach-instructions"><div class="teach-instruction-icon">⌖</div><b>Mostra l'elemento</b><p>Premi il pulsante. Hai 5 secondi per tornare a Fortnite. Oye cattura lo schermo e cerca l'elemento. Se serve, toccalo nello screenshot.</p><small>Non vengono inviati tasti al gioco durante la calibrazione.</small></div></div>
+            <div id="teach-preview" class="teach-preview" hidden><div class="teach-preview-top"><span>SCREENSHOT ACQUISITO</span><strong id="teach-preview-help">Indica il centro dell'elemento</strong></div><div id="teach-image-wrap" class="teach-image-wrap"><img id="teach-image" alt="Screenshot di Fortnite: clicca sul riferimento richiesto" draggable="false"></div><p>Fai un clic direttamente sul pulsante o sull'elemento HUD. Se l'area è complessa, apri la selezione manuale.</p></div>
+          </section>
+          <details id="advanced-calibration" class="advanced-calibration"><summary>Regolazione manuale e tutti i riferimenti <span>AVANZATO</span></summary><div class="cal-layout">
+            <section class="cal-workbench">
+              <div class="panel-head"><span class="small-title">01 / SCEGLI UNO SCREENSHOT</span><span class="meta">PNG O JPEG</span></div>
+              <div class="cal-toolbar"><button class="small-action" id="capture-btn">⌖ CATTURA DAL GIOCO · 5 S</button><label class="small-action" for="upload-input">↑ CARICA IMMAGINE</label><input type="file" id="upload-input" accept="image/png,image/jpeg" hidden></div>
+              <p id="cal-status" class="cal-hint">Passa a Fortnite dopo aver cliccato Cattura, oppure carica uno screenshot.</p>
+              <div id="cal-image-wrap" class="cal-image-wrap"><div id="cal-empty" class="cal-placeholder">Lo screenshot appare qui.<br>Trascina per selezionare il riferimento da salvare.</div><img id="cal-image" alt="Screenshot su cui selezionare il riferimento" draggable="false" hidden><div id="selection-box" hidden></div></div>
+              <div class="cal-save"><div><label for="template-select">RIFERIMENTO DA SALVARE</label><select id="template-select"></select></div><button id="save-template-btn" class="primary-btn compact-button" disabled>SALVA SELEZIONE <span>↗</span></button></div>
+              <p class="cal-footer-note">Opzione avanzata: trascina un rettangolo attorno all'elemento per sostituire la selezione automatica. Non selezionare l'intero schermo.</p>
+            </section>
+            <section class="cal-checklist"><div class="panel-head"><span class="small-title">02 / RIFERIMENTI NECESSARI</span><span class="meta" id="cal-total">0 COMPLETATI</span></div><div id="cal-list" class="cal-list"></div><div class="cal-assistance"><span>!</span><p>Per l'HUD servono due elementi strutturali (salute, inventario o minimappa), oppure il riferimento legacy «HUD in partita».</p></div></section>
+          </div></details>
+        </section>
+
+        <section id="page-archive" class="page">
+          <div class="page-heading compact archive-heading"><div><p class="eyebrow">MEMORIA LOCALE / NESSUN CLOUD</p><h1>Le mie <em>partite.</em></h1><p class="intro">Gli screenshot e le correzioni che hai già insegnato a Oye. Tutto proviene dal tuo SQLite originale.</p></div><button class="small-action" id="archive-refresh">↻ AGGIORNA ARCHIVIO</button></div>
+          <div class="library-stats"><div><span>FOTOGRAMMI</span><strong id="lib-frames">—</strong></div><div><span>EVENTI CORRETTI</span><strong id="lib-labeled">—</strong></div><div><span>AZIONI INSEGNATE</span><strong id="lib-actions">—</strong></div><div><span>SESSIONI</span><strong id="lib-sessions">—</strong></div></div>
+          <div class="archive-toolbar"><label>SESSIONE <select id="archive-session" aria-label="Sessione registrata"></select></label><label>FILTRO <select id="archive-filter"><option value="all">Tutti i fotogrammi</option><option value="review">Da rivedere</option><option value="labeled">Confermati</option><option value="actions">Azioni insegnate</option></select></label><button class="small-action" id="archive-export">↓ ESPORTA JSONL</button></div>
+          <div id="archive-empty" class="empty-state" hidden><div class="empty-orbit">◎</div><h2>Nessuna partita registrata</h2><p>Seleziona «Registra una partita giocata da me» nella Panoramica. I vecchi training, quando presenti, vengono visualizzati automaticamente.</p></div>
+          <div id="archive-grid" class="archive-grid" aria-live="polite"></div>
+          <div class="archive-pagination"><button id="archive-prev" class="small-action">← PRECEDENTI</button><span id="archive-page">—</span><button id="archive-next" class="small-action">SUCCESSIVI →</button></div>
+        </section>
+
+        <section id="page-timeline" class="page">
+          <div class="page-heading compact"><div><p class="eyebrow">EDITOR / FRAME BY FRAME</p><h1>Timeline<span class="period">.</span></h1><p class="intro">Rivedi gli screenshot nell'ordine in cui sono stati acquisiti, correggi gli eventi e associa azioni dimostrate. Nessun video sintetico: ogni frame è un dato reale registrato.</p></div><div class="editor-presence"><span class="pulsing-small"></span> MODIFICHE IN SQLITE</div></div>
+          <div class="timeline-toolbar"><label>SESSIONE <select id="timeline-session" aria-label="Sessione timeline"></select></label><button id="timeline-play" class="small-action">▶ RIPRODUCI</button><button id="timeline-prev" class="small-action">← FRAME</button><button id="timeline-next" class="small-action">FRAME →</button><button id="timeline-export" class="small-action">↓ ESPORTA</button></div>
+          <div class="timeline-grid">
+            <section class="timeline-stage"><div class="panel-head"><span class="small-title">VISUALIZZATORE / FRAME</span><span class="meta" id="timeline-counter">NESSUN FRAME</span></div><div class="timeline-screen"><img id="timeline-image" alt="Screenshot selezionato dalla timeline" hidden><div id="timeline-placeholder" class="stage-placeholder"><span>◉</span><strong>Apri una sessione registrata</strong><p>I fotogrammi compariranno qui, senza modificare i file originali.</p></div></div><div class="timeline-seek"><span id="timeline-at">00:00</span><input id="timeline-slider" type="range" min="0" max="0" value="0" aria-label="Scorri fotogrammi"><span id="timeline-total">00:00</span></div><div id="timeline-tracks" class="timeline-tracks" aria-label="Tracce eventi e comandi"></div><div id="timeline-filmstrip" class="timeline-filmstrip" aria-label="Fotogrammi della sessione"></div><div class="timeline-edit-actions"><button id="timeline-set-in" class="small-action">[ INIZIO INTERVALLO</button><button id="timeline-set-out" class="small-action">] FINE INTERVALLO</button><span id="timeline-range-summary">Nessun intervallo selezionato</span></div></section>
+            <section class="timeline-inspector"><div class="panel-head"><span class="small-title">ISPETTORE / CORREZIONI</span><span class="meta">DATI REALI</span></div><div class="inspector-body"><div class="inspector-id" id="inspect-id">SELEZIONA UN FRAME</div><div class="inspector-prediction" id="inspect-prediction">L'interpretazione di Oye apparirà qui.</div><label>EVENTO CORRETTO <input id="inspect-event" maxlength="100" placeholder="Es. Atterraggio, movimento, eliminazione"></label><label>AZIONE MOSTRATA <select id="inspect-action"><option value="">Nessuna nuova azione</option></select></label><label>NOTA <textarea id="inspect-note" rows="3" maxlength="2000" placeholder="Cosa stava succedendo?"></textarea></label><button id="inspect-save" class="primary-btn compact-button">SALVA CORREZIONI <span>↗</span></button><div class="inspector-divider"></div><span class="small-title">INTERVALLO SELEZIONATO</span><label>EVENTO NELL'INTERVALLO <input id="interval-event" maxlength="100" placeholder="Es. Camminata, combattimento"></label><button id="interval-save" class="small-action">APPLICA A INTERVALLO</button><button id="interval-confirm-demo" class="small-action" title="Conferma le azioni dimostrate nell'intervallo, solo dove è consentito">CONFERMA DIMOSTRAZIONI</button><div id="interval-history" class="interval-history"></div></div></section>
+          </div>
+          <section class="session-notes"><div class="panel-head"><span class="small-title">TACCUINO DI SESSIONE</span><span class="meta">ARCHIVIATO IN SQLITE</span></div><div class="session-notes-body"><textarea id="session-notes-input" rows="3" maxlength="3000" placeholder="Che cosa hai notato in questa partita? Errori, strategie, episodi da ricordare..."></textarea><button id="session-notes-save" class="small-action">SALVA NOTE</button></div></section>
+          <div class="editor-shortcuts">SCORCIATOIE: <kbd>←</kbd> <kbd>→</kbd> cambia frame · <kbd>Spazio</kbd> avvia/pausa (fuori dai campi di testo) · le modifiche sono salvate nel database esistente.</div>
+        </section>
+
+        <section id="page-screen" class="page">
+          <div class="page-heading compact"><div><p class="eyebrow">INSEGNAMENTO VISIVO · 01</p><h1>Schermate <span class="period">& OCR.</span></h1><p class="intro">Mostrami dove guardare e cosa significa. Ogni testo viene letto soltanto nella sua zona, con conferme indipendenti. Nessun nuovo controller parallelo.</p></div></div>
+          <div class="screen-config-grid">
+            <section class="settings-card"><div class="panel-head"><span class="small-title">01 / RISOLUZIONE DI FORTNITE</span><span class="meta" id="screen-current-mode">NON RILEVATA</span></div>
+              <p class="settings-note">Puoi rilevare automaticamente le dimensioni della finestra di gioco oppure scriverle tu.</p>
+              <div class="screen-inline"><button class="small-action" id="screen-auto">RILEVA DA FORTNITE ↗</button><input id="screen-width" type="number" min="640" max="7680" value="1920" aria-label="Larghezza"><span>×</span><input id="screen-height" type="number" min="480" max="4320" value="1080" aria-label="Altezza"></div>
+              <div class="screen-inline"><select id="screen-window-mode"><option value="borderless">Finestra senza bordi</option><option value="fullscreen">Schermo intero</option><option value="windowed">Finestra</option></select><button class="small-action" id="screen-manual">USA QUESTA RISOLUZIONE</button></div>
+              <p class="screen-feedback" id="screen-status">Profilo predefinito consigliato: 1920 × 1080, finestra senza bordi.</p>
+            </section>
+            <section class="settings-card"><div class="panel-head"><span class="small-title">02 / COSA DEVO RICONOSCERE?</span><span class="meta">UNA ZONA PER VOLTA</span></div>
+              <label class="screen-label" for="screen-target">Elemento dello schermo</label><select id="screen-target"></select>
+              <label class="screen-label" for="screen-expected">Testo che devo cercare con OCR (solo per elementi testuali)</label><input id="screen-expected" maxlength="120" placeholder="Es. RITORNA ALLA LOBBY">
+              <label class="screen-label" for="screen-explanation">Cosa significa per Oye?</label><textarea id="screen-explanation" rows="2" maxlength="500" placeholder="Es. Sono terminati i risultati; devo tornare alla lobby."></textarea>
+              <div id="screen-next" class="screen-next">Seleziona un elemento per vedere la regola applicata dal controller.</div>
+            </section>
+          </div>
+          <section class="settings-card screen-capture-card"><div class="panel-head"><span class="small-title">03 / MOSTRAMI LA POSIZIONE</span><span class="meta">SELEZIONE SULLO SCREENSHOT</span></div>
+            <div class="screen-inline"><button class="small-action" id="screen-capture">CATTURA DA FORTNITE (5 S)</button><label class="screen-file">CARICA SCREENSHOT <input type="file" id="screen-upload" accept="image/png,image/jpeg"></label><span class="screen-feedback" id="screen-shot-info">Nessuno screenshot</span></div>
+            <div class="screen-preview" id="screen-preview"><img id="screen-image" alt="Screenshot da cui ritagliare il singolo elemento" hidden><div id="screen-placeholder">Acquisisci uno screenshot, poi disegna un rettangolo intorno alla scritta o all'indicatore.</div><div id="screen-draw" hidden></div></div>
+            <div class="screen-inline"><button class="primary-btn compact-button" id="screen-save">SALVA QUESTA ZONA ↗</button><button class="small-action" id="screen-test">PROVA QUESTO OCR</button><span id="screen-test-result" class="screen-feedback">Nessuna lettura eseguita</span></div>
+          </section>
+          <section class="settings-card"><div class="panel-head"><span class="small-title">ZONE INSEGNATE</span><span class="meta">SALVATE NEL TUO SQLITE</span></div><div id="screen-rules" class="screen-rules"><p class="settings-note">Nessuna zona ancora registrata.</p></div></section>
+        </section>
+        <section id="page-settings" class="page">
+          <div class="page-heading compact"><div><p class="eyebrow">PERSONALIZZAZIONE</p><h1>Impostazioni<span class="period">.</span></h1><p class="intro">Le impostazioni essenziali. La configurazione tecnica completa resta in <code>config.json</code>.</p></div></div>
+          <div class="settings-grid">
+            <section class="settings-card"><div class="panel-head"><span class="small-title">MOVIMENTO E PARTITA</span><span class="meta">PROFILO</span></div><div class="setting-field"><label for="profile-setting">Stile di movimento</label><select id="profile-setting"><option value="equilibrato">Equilibrato</option><option value="esploratore">Esploratore</option><option value="raccoglitore">Raccoglitore</option></select></div><div class="setting-field"><label for="jump-setting">Salti iniziali <small>secondi</small></label><input type="number" id="jump-setting" min="30" max="180" step="10" value="120"></div><div class="setting-field"><label for="interval-setting">Intervallo salti <small>secondi</small></label><input type="number" id="interval-setting" min="0.75" max="5" step="0.1" value="1.8"></div><div class="setting-field"><label for="ignorante-loading">Ignorante: attesa dopo GIOCA scomparso (s)</label><input id="ignorante-loading" type="number" min="15" max="360" value="120"></div><div class="setting-field"><label for="ignorante-jump-min">Salti solo Spazio: minimo (s)</label><input id="ignorante-jump-min" type="number" min="30" max="300" value="120"></div><div class="setting-field"><label for="ignorante-jump-interval">Spazio ogni (secondi)</label><input id="ignorante-jump-interval" type="number" min="0.5" max="5" step="0.1" value="0.8"></div><div class="setting-field"><label for="ignorante-jump-max">Salti solo Spazio: massimo (s)</label><input id="ignorante-jump-max" type="number" min="30" max="300" value="150"></div><div class="setting-field"><label for="camera-setting">Ampiezza telecamera <small>pixel</small></label><input type="number" id="camera-setting" min="20" max="320" value="150"></div><div class="setting-field"><label for="pickaxe-setting">Tasto selezione piccone <small>deve corrispondere a Fortnite</small></label><select id="pickaxe-setting"><option value="f">F</option><option value="1">1</option><option value="q">Q</option><option value="v">V</option><option value="x">X</option><option value="z">Z</option><option value="c">C</option><option value="tab">TAB</option></select></div><div class="toggle-field"><div><b>Esplorazione e piccone</b><p>Attiva le azioni di raccolta.</p></div><input type="checkbox" id="harvest-setting" checked></div><div class="toggle-field"><div><b>OCR Tesseract</b><p>Legge le scritte di partita e spettatore.</p></div><input type="checkbox" id="ocr-setting" checked></div><details class="web-advanced-settings"><summary>Parametri avanzati di navigazione e apprendimento</summary>
+<div class="toggle-field"><div><b>Usa le dimostrazioni</b><p>Consenti al controller di sfruttare le azioni corrette salvate in SQLite.</p></div><input id="learning-setting" type="checkbox" checked></div>
+<div class="toggle-field"><div><b>Camminata fluida</b><p>Mantieni il movimento durante alcune azioni.</p></div><input id="smooth-setting" type="checkbox" checked></div>
+<div class="setting-field"><label for="recovery-setting">Tentativi di recupero ostacolo</label><input id="recovery-setting" type="number" min="1" max="8" step="1" value="3"></div>
+<div class="setting-field"><label for="motion-setting">Soglia variazione visiva</label><input id="motion-setting" type="number" min="0.1" max="5" step="0.05" value="0.55"></div>
+<div class="setting-field"><label for="fall-setting">Discesa minima <small>secondi</small></label><input id="fall-setting" type="number" min="8" max="60" step="1" value="20"></div>
+<div class="toggle-field"><div><b>Ollama locale</b><p>Abilita soltanto se hai installato un modello multimodale compatibile.</p></div><input id="ollama-setting" type="checkbox"></div>
+<div class="setting-field"><label for="ollama-model-setting">Modello Ollama</label><input id="ollama-model-setting" type="text" value="qwen2.5vl:3b" maxlength="100"></div>
+</details><button id="save-settings-btn" class="primary-btn compact-button">SALVA IMPOSTAZIONI <span>↗</span></button></section>
+            <section class="settings-card"><div class="panel-head"><span class="small-title">MAPPATURA COMANDI</span><span class="meta">PROFILO STANDARD</span></div><p class="settings-note">Movimento con WASD e azioni col mouse. I tasti vengono inviati dall'app solo quando Fortnite è la finestra in primo piano.</p><div class="mapping-list"><div><span>Avanti</span><kbd id="bind-forward">W</kbd></div><div><span>Indietro</span><kbd id="bind-back">S</kbd></div><div><span>Sinistra</span><kbd id="bind-left">A</kbd></div><div><span>Destra</span><kbd id="bind-right">D</kbd></div><div><span>Salto</span><kbd id="bind-jump">SPAZIO</kbd></div><div><span>Seleziona piccone</span><kbd id="bind-pickaxe">F</kbd></div><div><span>Azione / piccone</span><kbd>CLIC SINISTRO</kbd></div><div><span>Secondario / mira</span><kbd>CLIC DESTRO</kbd></div></div><div class="notice-info">Durante la partita riconosciuta Oye può usare anche un breve clic destro circa ogni 26 secondi. Nessun clic nelle schermate di attesa o spettatore.</div><button id="open-editor-btn" class="small-action editor-button">APRI EDITOR WEB / TIMELINE ↗</button></section>
+          </div>
+        <section class="settings-card diagnostic-tools"><div class="panel-head"><span class="small-title">DIAGNOSTICA INPUT</span><span class="meta">TEST GUIDATI</span></div><p class="settings-note">Due verifiche manuali: Oye invia brevemente W oppure tenta di girare la camera. Premi il pulsante e torna a Fortnite entro tre secondi. I risultati appariranno nel registro.</p><div class="diagnostic-tool-row"><button id="test-forward-btn" class="small-action">PROVA MOVIMENTO W</button><button id="test-camera-btn" class="small-action">PROVA TELECAMERA</button></div><p class="settings-note">Un comando inviato non dimostra che il gioco lo abbia ricevuto.</p></section>
+        </section>
+      </main>
+      <footer class="footer"><span>OYE / LOCAL-FIRST SYSTEM</span><span>OSSERVA / IMPARA / AGISCE</span></footer>
+    </div>
+  </div>
+
+  <div id="confirm-overlay" class="modal-overlay" hidden><div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title"><div class="modal-mark">!</div><p class="eyebrow">ATTIVAZIONE INPUT LIVE</p><h2 id="confirm-title">Confermi l'avvio?</h2><p>Questa modalità invia tasti e clic a Fortnite. Può violare le regole del gioco e comportare sanzioni. Non sono presenti sistemi per aggirare l'anti-cheat.</p><p><strong>Per fermare:</strong> premi F9 in qualsiasi momento. Per sospendere: F8.</p><label class="consent-line"><input type="checkbox" id="consent-checkbox"> <span>Autorizzo gli input LIVE per questa sessione.</span></label><div class="modal-buttons"><button class="outline-btn" id="cancel-confirm">ANNULLA</button><button class="primary-btn" id="confirm-start" disabled>CONFERMA E AVVIA <span>↗</span></button></div></div></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

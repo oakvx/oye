@@ -1,0 +1,4 @@
+# FACOLTATIVO: non installato da installa_windows.bat.
+# ATTENZIONE: vgamepad su Windows può proporre l'installazione automatica
+# del driver ViGEmBus (progetto dismesso). Leggere LEGGIMI.md prima dell'uso.
+vgamepad>=0.1.0

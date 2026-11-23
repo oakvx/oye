@@ -1,0 +1,16 @@
+{
+  "harvest": true,
+  "min_fall": 20.0,
+  "frames": [
+    {"at": 0.5, "scene": "lobby"},
+    {"at": 1.0, "scene": "loading"},
+    {"at": 2.0, "scene": "unknown", "phase": "battle_bus", "phase_source": "template calibrato"},
+    {"at": 2.2, "scene": "unknown", "phase": "battle_bus", "phase_source": "template calibrato"},
+    {"at": 3.0, "scene": "unknown"},
+    {"at": 10.0, "scene": "unknown", "phase": "skydiving", "phase_source": "template calibrato"},
+    {"at": 20.0, "scene": "match", "ground": true},
+    {"at": 33.0, "scene": "match", "ground": true},
+    {"at": 34.0, "scene": "match", "ground": true},
+    {"at": 36.0, "scene": "spectator", "spectator": true}
+  ]
+}

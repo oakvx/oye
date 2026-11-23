@@ -1,0 +1,3 @@
+# Oye 37 HTML/CSS/JS UI (zero front-end dependencies).
+# Optional: opens in WebView2; otherwise uses the system browser.
+pywebview>=5.0,<7

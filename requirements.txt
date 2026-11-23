@@ -1,0 +1,11 @@
+opencv-python>=4.8,<5
+mss>=9,<11
+numpy>=1.26,<3
+Pillow>=10,<13
+pyautogui>=0.9.54,<1
+pynput>=1.7,<2
+# OCR python client: the Tesseract executable is installed separately.
+pytesseract>=0.3.10,<1
+
+# Diagnostica CPU/RAM del debugger scanner
+psutil>=5.9,<8
