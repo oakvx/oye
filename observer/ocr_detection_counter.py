@@ -8,6 +8,7 @@ screenshots, calls Tesseract, or authorizes gameplay input.
 from __future__ import annotations
 
 from collections import defaultdict, deque
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 import threading
@@ -29,7 +30,7 @@ class OCRDetectionCounter:
         self.storage_error = ''
         try:
             self.path.parent.mkdir(parents=True, exist_ok=True)
-            with sqlite3.connect(self.path, timeout=3.0) as db:
+            with closing(sqlite3.connect(self.path, timeout=3.0)) as db, db:
                 db.execute('''CREATE TABLE IF NOT EXISTS oye_ocr_detection_counts (
                     target TEXT PRIMARY KEY, total INTEGER NOT NULL DEFAULT 0,
                     last_at REAL NOT NULL, last_text TEXT NOT NULL DEFAULT '',
@@ -94,7 +95,7 @@ class OCRDetectionCounter:
                      'confidence': round(min(1., max(0., float(confidence))), 3)}
             self.events.appendleft(event)
             try:
-                with sqlite3.connect(self.path, timeout=3.0) as db:
+                with closing(sqlite3.connect(self.path, timeout=3.0)) as db, db:
                     db.execute('''INSERT INTO oye_ocr_detection_counts
                         (target,total,last_at,last_text,last_confidence)
                         VALUES(?,1,?,?,?) ON CONFLICT(target) DO UPDATE SET
@@ -130,7 +131,7 @@ class OCRDetectionCounter:
             return empty
         try:
             # Read-only: checking a status endpoint must never mutate a database.
-            with sqlite3.connect(path.as_uri() + '?mode=ro', uri=True, timeout=1.5) as db:
+            with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True, timeout=1.5)) as db:
                 rows = db.execute('''SELECT target,total,last_at,last_text,last_confidence
                                    FROM oye_ocr_detection_counts ORDER BY total DESC,target''').fetchall()
                 history = db.execute('''SELECT target,label,at,text,confidence
