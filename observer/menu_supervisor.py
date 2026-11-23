@@ -200,6 +200,11 @@ class MenuSupervisor:
         self.stable_name = None
         self.stable_count = 0
 
+    def invalidate_observations(self) -> None:
+        """Discard target stability after a geometry/focus change, not click history."""
+        self.stable_name = None
+        self.stable_count = 0
+
     def reset(self) -> None:
         self.pending = None
         self.stable_name = None

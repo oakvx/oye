@@ -23,3 +23,7 @@ La dashboard avvia Ignorante in ciclo continuo: Gioca → caricamento → salti 
 Durante l'ingresso, le letture della zona Gioca hanno priorità; nei risultati ha priorità Gioca di nuovo. Le altre zone continuano a essere lette a rotazione: resta un solo OCR per acquisizione, per non sovraccaricare il sistema. Fotogrammi ripetuti o fuori ordine non vengono reinviati come nuove prove. Se cambia la risoluzione rispetto al profilo, le coordinate OCR conservate vengono scartate: selezionare o insegnare un profilo adatto alla risoluzione effettiva.
 
 La scomparsa di Gioca richiede tre osservazioni negative distinte: una lettura OCR negativa conservata temporaneamente non viene contata più volte sui fotogrammi successivi. Finché mancano conferme, la routine resta in attesa.
+
+## Clic e finestra reale
+
+Prima di ogni clic di menu LIVE, Oye ricontrolla che la finestra in primo piano corrisponda a quella del fotogramma, che immagine e lettura siano recenti e che il punto sia nell'area client. Quando la finestra cambia posizione o perde il focus, le conferme e i risultati OCR in corso legati alla vecchia finestra vengono scartati; i tentativi di clic già inviati restano conteggiati. Un messaggio `menu_blocked` spiega il motivo del rifiuto. Questo riduce il rischio di coordinate obsolete, ma non elimina la possibile variazione di focus durante la singola chiamata al sistema operativo e non dimostra che il gioco abbia ricevuto il clic.

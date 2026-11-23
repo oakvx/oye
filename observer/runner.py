@@ -59,6 +59,21 @@ def _cached_play_match(now, scene, region_recent, scanner_play_recent, left, top
         return scanner_play_recent
     return None
 
+def _menu_click_guard(point, captured_window, current_window, frame_at, evidence_at, now):
+    """Last-moment check for a click derived from a real captured client area."""
+    if current_window is None or current_window != captured_window:
+        return 'finestra non più in primo piano o geometria cambiata'
+    if not (0 <= now - frame_at <= 4 and 0 <= now - evidence_at <= 4):
+        return 'immagine o lettura OCR scaduta'
+    if (not isinstance(point, (tuple, list)) or len(point) != 2 or
+            any(type(value) is not int for value in point)):
+        return 'coordinate non valide'
+    x, y = point
+    if not (current_window.left <= x < current_window.left + current_window.width and
+            current_window.top <= y < current_window.top + current_window.height):
+        return 'coordinate fuori dalla finestra del gioco'
+    return None
+
 class Runner:
     def __init__(self, *, live: bool = False, auto_requeue: bool = False,
                  shoot: bool = False, seed: int | None = None,
@@ -336,6 +351,8 @@ class Runner:
         region_reward_scans = deque(maxlen=12)
         region_recent = {}
         scanner_play_recent = None  # (capture time, calibrated Match), never a new OCR observation
+        region_frame_windows = {}
+        last_ocr_window = None
         last_phase_ocr_label = 'normal'
         last_phase_ocr_error = ''
         quick_ocr_fault = False
@@ -707,6 +724,16 @@ class Runner:
                     continue
                 win = foreground_window(self.cfg['window_executables'])
                 if win is None:
+                    # Do not reuse an in-flight OCR result after alt-tab, even
+                    # if the same window returns to the same coordinates.
+                    if last_ocr_window is not None:
+                        region_recent.clear()
+                        scanner_play_recent = None
+                        self._play_region_status = None
+                        region_frame_windows.clear()
+                        if menu_supervisor is not None:
+                            menu_supervisor.invalidate_observations()
+                        last_ocr_window = None
                     if timed is not None:
                         timed.last_tick = None  # focus loss pauses timer
                     if single is not None:
@@ -728,6 +755,16 @@ class Runner:
                         self._last_focus_notice = True
                     self.stop_event.wait(.4)
                     continue
+                if win != last_ocr_window:
+                    # OCR points and stability belong to the window geometry
+                    # on which they were measured, not to a later placement.
+                    region_recent.clear()
+                    scanner_play_recent = None
+                    self._play_region_status = None
+                    region_frame_windows.clear()
+                    if menu_supervisor is not None:
+                        menu_supervisor.invalidate_observations()
+                    last_ocr_window = win
                 if self._last_focus_notice:
                     self._emit('focus', f'Finestra verificata: {win.executable}')
                     self._last_focus_notice = False
@@ -809,10 +846,16 @@ class Runner:
                         if now - last_region_ocr_submit >= 1.4:
                             if self.region_ocr.submit(frame,captured_at,single.stage if single else ''):
                                 last_region_ocr_submit = now
+                                region_frame_windows[captured_at] = win
+                                clock_now = time.monotonic()
+                                region_frame_windows = {t: w for t, w in region_frame_windows.items()
+                                                        if 0 <= clock_now - t < 10.0}
                         regional = self.region_ocr.take()
                         # The worker is asynchronous: ignore expired screenshots
                         # before consulting ANY modular state or menu coordinates.
-                        if regional is not None and not (0 <= now-regional.get('at',-1) <= 3.4):
+                        if regional is not None and (
+                                not (0 <= now-regional.get('at',-1) <= 3.4) or
+                                region_frame_windows.pop(regional.get('at'), None) != win):
                             regional=None
                         if regional is not None:
                             # Notify the dashboard only when a newly confirmed
@@ -1759,6 +1802,15 @@ class Runner:
                         menu_offer.action.point != decision.point):
                     self._emit('menu_blocked','Clic menu rifiutato: nessuna transazione verificata')
                     decision=Action('wait',reason='Menu: attendo riconoscimento e conferme')
+                if self.live and decision.name == 'menu_click':
+                    checked_at = time.monotonic()
+                    reason = _menu_click_guard(decision.point, win,
+                        foreground_window(self.cfg['window_executables']), captured_at,
+                        menu_evidence_at.get(menu_target, captured_at) if single is not None else captured_at,
+                        checked_at)
+                    if reason:
+                        self._emit('menu_blocked', 'Clic menu rifiutato: ' + reason)
+                        decision = Action('wait', reason='Menu: ' + reason)
                 executed = False
                 if decision.name != 'wait':
                     self._emit('decision', f'{decision.name}: {decision.reason}', info={
