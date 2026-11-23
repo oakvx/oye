@@ -88,7 +88,9 @@ class MenuSupervisor:
               reward_scan_confirmed: bool = True, locked: bool = False,
               spectator: bool = False,
               evidence_times: dict[str, float] | None = None,
-              prefer_requeue: bool = False) -> MenuProposal:
+              prefer_requeue: bool = False,
+              require_play_confirmation: bool = False,
+              play_confirmation=None) -> MenuProposal:
         wait = lambda message: MenuProposal(None, Action('wait', reason=message), message)
         if locked or spectator or scene == 'spectator':
             self.stable_count = 0
@@ -147,6 +149,14 @@ class MenuSupervisor:
             allowed = self._targets(stage=stage, scene=scene, repeat=repeat,
                 reward_overlay=reward_overlay, reward_scan_confirmed=reward_scan_confirmed,
                 prefer_requeue=prefer_requeue)
+        # PLAY is the sole exception to the scene requirement: UNKNOWN does
+        # not prove lobby, but a separately corroborated button can authorize.
+        if require_play_confirmation and stage in ('await_play', 'joining'):
+            if (play_confirmation is not None and scene in ('lobby', 'unknown') and
+                    not reward_overlay and (stage == 'joining' or reward_scan_confirmed)):
+                allowed = ('gioca',) if self.pending is None or self.pending.name == 'gioca' else allowed
+            else:
+                allowed = tuple(n for n in allowed if n != 'gioca')
         name = next((n for n in allowed if n in matches), None)
         if name is None:
             self.stable_name = None
@@ -172,6 +182,10 @@ class MenuSupervisor:
         if (match.center is None or len(match.center) != 2 or
             any(type(x) is not int or x < 0 for x in match.center)):
             return wait(f'{name}: coordinate non valide, insegnami il pulsante')
+        if require_play_confirmation and name == 'gioca' and play_confirmation is not None:
+            # Three distinct paired readings have already been counted by the
+            # shared evidence accumulator, not by repeated captured frames.
+            self.stable_name, self.stable_count = name, (self.CONFIRM_FRAMES if self.pending else self.CONFIRM_FRAMES - 1)
         if self.pending is None:
             if self.stable_name == name:
                 self.stable_count += 1

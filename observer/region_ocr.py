@@ -266,7 +266,8 @@ class ScreenRegionOCRWorker:
                     self.counts[target]=0
                 self.counts[target]=self.counts[target]+1 if r.status=='ok' and r.matched else 0
                 self.last_seen_at[target]=at
-                readings[target]={**r.__dict__,'stable':self.counts[target]>=2 and r.matched}
+                readings[target]={**r.__dict__,'stable':self.counts[target]>=2 and r.matched,
+                                  'region':list(self.rules[target]['region'])}
                 if self.discovery.observe(target,at=at,status=r.status,matched=r.matched,
                     stable=readings[target]['stable'],text=r.text,confidence=r.score,
                     label=target.replace('_',' ').title()):

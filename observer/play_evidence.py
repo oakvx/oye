@@ -1,4 +1,4 @@
-"""Conservative, input-free PLAY evidence accumulator (not wired to Runner yet).
+"""Conservative, input-free PLAY evidence accumulator.
 
 A scanner's method, not its name, determines independence. Rectangle and
 point use absolute captured-window coordinates. A reading never refreshes by
