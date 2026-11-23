@@ -35,6 +35,42 @@ class StateDecision:
                 'alternatives':{k:round(v,3) for k,v in self.alternatives.items()},
                 'reason':self.reason,'transition':self.transition,'evidence':list(self.evidence),'at':self.timestamp}
 
+class LobbySceneEvidence:
+    """Short-lived confirmed fusion result, not an independent classifier.
+
+    Only an actually acquired positive lobby scanner result can refresh it.
+    Frame reuse never refreshes the original timestamp. Focus/geometry changes
+    and known contradictory scenes invalidate the observation.
+    """
+    TTL_SECONDS = 7.5
+
+    def __init__(self):
+        self.at = float('-inf')
+        self.window = None
+
+    def invalidate(self):
+        self.at = float('-inf')
+        self.window = None
+
+    def confirm(self, at, window):
+        if window is not None and at > self.at:
+            self.at = at
+            self.window = window
+
+    def resolve(self, scene, now, window):
+        if window is None or (self.window is not None and window != self.window):
+            self.invalidate()
+            return scene
+        if scene not in ('lobby', 'unknown'):
+            self.invalidate()
+            return scene
+        if scene == 'unknown' and 0 <= now - self.at < self.TTL_SECONDS:
+            return 'lobby'
+        if now - self.at >= self.TTL_SECONDS:
+            self.invalidate()
+        return scene
+
+
 class StateRecognitionEngine:
     def __init__(self,*,window=9,stable_frames=2,unknown_timeout=9.0,margin=.13):
         self.history=deque(maxlen=max(3,min(30,window)))

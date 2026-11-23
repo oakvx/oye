@@ -87,6 +87,7 @@ class RealisticOCRCadenceTests(unittest.TestCase):
         runner = object.__new__(Runner)
         runner._button_positive_at = {}
         runner._button_logged_at = {}
+        runner._button_logged_status = {}
         events = []
         runner._emit = lambda kind, message, info: events.append((kind, info))
         runner._record_button_evidence('gioca', 'ocr_zona', 1., .9, 'present', 2.)
