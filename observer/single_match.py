@@ -593,7 +593,7 @@ class SingleMatchController:
                     ('continua', 'torna_lobby', 'gioca_di_nuovo') and candidate.name == 'menu_click'
                     and (menu != 'gioca_di_nuovo' or self.repeat)):
                 return candidate
-            return self._wait('Fine partita: attendo CONTINUA / TORNA ALLA LOBBY')
+            return self._wait('Fine partita: attendo GIOCA DI NUOVO / CONTINUA / TORNA ALLA LOBBY')
 
         # Manual time-only start is NOT a verified match. A persistent false
         # PLAY/lobby match must not re-arm the workflow and silently stop W.

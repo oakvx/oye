@@ -53,7 +53,7 @@ class MenuSupervisor:
 
     @staticmethod
     def _targets(*, stage: str, scene: str, repeat: bool, reward_overlay: bool,
-                 reward_scan_confirmed: bool) -> tuple[str, ...]:
+                 reward_scan_confirmed: bool, prefer_requeue: bool = False) -> tuple[str, ...]:
         if reward_overlay:
             return ('riscatta',) if stage in ('claim_rewards', 'post_lobby', 'await_play', 'ending') else ()
         if stage == 'claim_rewards' or stage == 'post_lobby':
@@ -61,6 +61,8 @@ class MenuSupervisor:
         if stage in ('await_play', 'joining') and scene in ('lobby', 'unknown'):
             return ('gioca',) if (stage == 'joining' or reward_scan_confirmed) else ()
         if stage == 'ending' and scene == 'results':
+            if repeat and prefer_requeue:
+                return ('gioca_di_nuovo', 'torna_lobby', 'continua')
             return ('torna_lobby', 'continua', 'gioca_di_nuovo') if repeat else ('torna_lobby', 'continua')
         return ()
 
@@ -85,7 +87,8 @@ class MenuSupervisor:
               matches: dict[str, Match], repeat: bool, reward_overlay: bool = False,
               reward_scan_confirmed: bool = True, locked: bool = False,
               spectator: bool = False,
-              evidence_times: dict[str, float] | None = None) -> MenuProposal:
+              evidence_times: dict[str, float] | None = None,
+              prefer_requeue: bool = False) -> MenuProposal:
         wait = lambda message: MenuProposal(None, Action('wait', reason=message), message)
         if locked or spectator or scene == 'spectator':
             self.stable_count = 0
@@ -142,7 +145,8 @@ class MenuSupervisor:
             allowed = (previous.name,)
         else:
             allowed = self._targets(stage=stage, scene=scene, repeat=repeat,
-                reward_overlay=reward_overlay, reward_scan_confirmed=reward_scan_confirmed)
+                reward_overlay=reward_overlay, reward_scan_confirmed=reward_scan_confirmed,
+                prefer_requeue=prefer_requeue)
         name = next((n for n in allowed if n in matches), None)
         if name is None:
             self.stable_name = None

@@ -46,6 +46,19 @@ from .windows import enable_dpi_awareness, foreground_window, snapshot, close_ca
 
 ROOT = Path(__file__).resolve().parents[1]
 
+def _cached_play_match(now, scene, region_recent, scanner_play_recent, left, top):
+    """Return the latest positive PLAY match and its *original* OCR timestamp."""
+    if scene not in ('lobby', 'unknown'):
+        return None
+    cached = region_recent.get('gioca')
+    if cached is not None and 0 <= now - cached[0] < 3.4:
+        at, result = cached
+        return at, Match('gioca', result['score'],
+                         (result['center'][0] + left, result['center'][1] + top))
+    if scanner_play_recent is not None and 0 <= now - scanner_play_recent[0] < 3.4:
+        return scanner_play_recent
+    return None
+
 class Runner:
     def __init__(self, *, live: bool = False, auto_requeue: bool = False,
                  shoot: bool = False, seed: int | None = None,
@@ -314,6 +327,7 @@ class Runner:
         last_region_report = ''
         region_reward_scans = deque(maxlen=12)
         region_recent = {}
+        scanner_play_recent = None  # (capture time, calibrated Match), never a new OCR observation
         last_phase_ocr_label = 'normal'
         last_phase_ocr_error = ''
         quick_ocr_fault = False
@@ -825,7 +839,10 @@ class Runner:
                                        if v.get('at')==regional['at'] and regional.get('status')=='ok'}
                             scanner_gioca=scan_data.get('lobby',{})
                             if scanner_gioca.get('status') in ('present','absent'):
-                                self._play_region_status=(now,scanner_gioca['status'])
+                                self._play_region_status=(regional['at'],scanner_gioca['status'])
+                            # A fresh negative or failed reading invalidates cached coordinates.
+                            if scanner_gioca and scanner_gioca.get('status') != 'present':
+                                scanner_play_recent = None
                             if (confirmed and fusion.get('state')=='LOBBY' and
                                     scanner_gioca.get('status')=='present' and
                                     reading.scene in ('unknown','lobby') and
@@ -835,6 +852,7 @@ class Runner:
                                     point=(win.left+round((roi[0]+roi[2])*frame.shape[1]/2),
                                            win.top+round((roi[1]+roi[3])*frame.shape[0]/2))
                                     reading.best['gioca']=Match('gioca',float(scanner_gioca['confidence']),point)
+                                    scanner_play_recent = (regional['at'], reading.best['gioca'])
                                     menu_evidence_at['gioca']=regional['at']
                                     reading=replace(reading,scene='lobby')
                             # Only explicit, confirmed result states can provide
@@ -860,6 +878,11 @@ class Runner:
                                           'scanner_scores':fusion.get('alternatives',{}),
                                           'scanner_transition':fusion.get('transition','')})
                             if regional.get('status') == 'resolution_mismatch':
+                                # Old coordinates belong to another resolution and
+                                # must not remain actionable during the TTL window.
+                                region_recent.clear()
+                                scanner_play_recent = None
+                                self._play_region_status = None
                                 tag='Risoluzione OCR diversa: '+str(regional.get('actual'))
                                 if tag != last_region_report:
                                     self._emit('region_ocr_error',tag+'; il profilo non viene applicato')
@@ -879,7 +902,9 @@ class Runner:
                                           'absent' if play_part.get('status')=='ok' and
                                           not play_part.get('matched') and play_part.get('text') else
                                           'unknown')
-                                    self._play_region_status = (now, ps)
+                                    self._play_region_status = (regional['at'], ps)
+                                    if ps != 'present':
+                                        scanner_play_recent = None
                                 stable={k:v for k,v in data.items() if v['stable'] and v['status']=='ok'}
                                 for target, result in data.items():
                                     if result.get('stable') and result.get('status')=='ok':
@@ -904,6 +929,18 @@ class Runner:
                                     reading=replace(reading,scene='spectator')
                                 elif ('gioca' in stable and reading.scene=='unknown'):
                                     reading=replace(reading,scene='lobby')
+
+                    # OCR is asynchronous and usually slower than frame capture.
+                    # Carry the latest positive PLAY evidence between results so
+                    # the supervisor does not reset its streak on every video
+                    # frame. Preserve the original capture time: repeated frames
+                    # must never count as independent OCR confirmations.
+                    if 'gioca' not in reading.best:
+                        cached = _cached_play_match(now, reading.scene, region_recent,
+                                                    scanner_play_recent, win.left, win.top)
+                        if cached is not None:
+                            at, reading.best['gioca'] = cached
+                            menu_evidence_at['gioca'] = at
 
                 except Exception as exc:
                     if self.quick_start:
@@ -1282,7 +1319,8 @@ class Runner:
                                     repeat=single.repeat, reward_overlay=reward_overlay_confirmed,
                                     reward_scan_confirmed=reward_scan_confirmed,
                                     locked=overlay.hold, spectator=brain.spectator_latched,
-                                    evidence_times=menu_evidence_at)
+                                    evidence_times=menu_evidence_at,
+                                    prefer_requeue=self.quick_wait_play_exit)
                                 if menu_supervisor.last_completed == 'gioca_di_nuovo':
                                     single.on_requeue_confirmed(now)
                                     self._emit('menu_verified', 'GIOCA DI NUOVO: nuova ricerca confermata, timer partita riarmato')
@@ -1316,7 +1354,9 @@ class Runner:
                                     # Observed menu and authorized click are different: 
                                     # the lifecycle needs to SEE Gioca in lobby even
                                     # when the click supervisor is waiting.
-                                    menu=menu_target or (reading.menu.name if reading.menu else None),
+                                    menu=menu_target or ('gioca' if single.stage == 'joining' and
+                                        'gioca' in reading.best else
+                                        (reading.menu.name if reading.menu else None)),
                                     candidate=(menu_offer.action if menu_target is not None else Action('wait')),
                                     menu_candidate_authorized=menu_target is not None,
                                     authorized=authorized,
@@ -1357,6 +1397,11 @@ class Runner:
                                         'Cronologia SQLite non aggiornata: ' + str(exc)[:140])
                                 last_cycle_stage = single.stage
                                 last_cycle_matches = single.matches_completed
+                            if (self.quick_wait_play_exit and single.stage == 'joining' and
+                                    decision.name == 'wait' and menu_offer is not None and
+                                    ('gioca' in reading.best or self._play_visibility(reading, now) is True) and
+                                    decision.reason.startswith('GIOCA visibile')):
+                                decision = Action('wait', reason='GIOCA: ' + menu_offer.detail)
                             if (self.quick_start and decision.name == 'wait' and
                                     (now - last_quick_wait_report >= 6 or
                                      (decision.reason != last_quick_wait_reason and
