@@ -151,7 +151,7 @@ class SingleMatchController:
                 self.quick_wait_elapsed = 0.0
             if self.quick_play_streak < 3:
                 return self._wait(f'GIOCA visibile: confermo posizione {self.quick_play_streak}/3')
-            if menu != 'gioca' or scene not in ('lobby', 'unknown'):
+            if menu != 'gioca' or scene != 'lobby':
                 return self._wait('GIOCA visibile, ma pulsante/contesto non confermato: attendo')
             target = play_point
             if target is None and candidate.name == 'menu_click':

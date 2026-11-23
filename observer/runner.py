@@ -81,6 +81,17 @@ def _cached_result_menu_matches(now, scene, region_recent, left, top):
                          (result['center'][0] + left, result['center'][1] + top)))
     return matches
 
+_MOUSE_BUTTON_ACTIONS = frozenset({
+    'patrol_harvest', 'forward_harvest', 'harvest', 'shoot', 'forward_shoot',
+    'strafe_left_shoot', 'strafe_right_shoot', 'secondary_click', 'aim_hold',
+})
+
+def _ignorante_mouse_gate(action, *, scene, gameplay_authorized):
+    """Never send mouse buttons from the routine without a stable match HUD."""
+    if action.name in _MOUSE_BUTTON_ACTIONS and not (scene == 'match' and gameplay_authorized):
+        return Action('wait', reason='Mouse sospeso: HUD di partita non confermato')
+    return action
+
 def _menu_click_guard(point, captured_window, current_window, frame_at, evidence_at, now):
     """Last-moment check for a click derived from a real captured client area."""
     if current_window is None or current_window != captured_window:
@@ -521,6 +532,8 @@ class Runner:
                         or self.stop_event.is_set() or not self._allowed()):
                     return
                 action = single.quick_without_frame(now)
+                if self.quick_wait_play_exit:
+                    action = _ignorante_mouse_gate(action, scene='unknown', gameplay_authorized=False)
                 if action.name != 'wait':
                     sent = driver.run(action)
                     if sent:
@@ -1865,6 +1878,9 @@ class Runner:
                         menu_offer.action.point != decision.point):
                     self._emit('menu_blocked','Clic menu rifiutato: nessuna transazione verificata')
                     decision=Action('wait',reason='Menu: attendo riconoscimento e conferme')
+                if self.quick_wait_play_exit and single is not None and single.stage in ('jumping', 'exploring'):
+                    decision = _ignorante_mouse_gate(decision, scene=reading.scene,
+                                                     gameplay_authorized=authorized)
                 if self.live and decision.name == 'menu_click':
                     checked_at = time.monotonic()
                     reason = _menu_click_guard(decision.point, win,

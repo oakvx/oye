@@ -58,7 +58,7 @@ class MenuSupervisor:
             return ('riscatta',) if stage in ('claim_rewards', 'post_lobby', 'await_play', 'ending') else ()
         if stage == 'claim_rewards' or stage == 'post_lobby':
             return ()
-        if stage in ('await_play', 'joining') and scene in ('lobby', 'unknown'):
+        if stage in ('await_play', 'joining') and scene == 'lobby':
             return ('gioca',) if (stage == 'joining' or reward_scan_confirmed) else ()
         if stage == 'ending' and scene == 'results':
             if repeat and prefer_requeue:

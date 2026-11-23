@@ -37,3 +37,7 @@ Con submit ogni 1,4 s, turni legacy/modulari alterni e target preferito ogni due
 Il log `button_evidence` riporta per le nuove letture positive del template e le letture effettive OCR/scanner: pulsante, fonte, timestamp monotono originale, punteggio disponibile, stato, intervallo dalla precedente lettura positiva della stessa fonte ed età al momento dell'osservazione. Il timestamp monotono ha senso solo nella stessa sessione; il punteggio non è probabilità. I punteggi negativi dei template non sono attualmente esposti da `Vision`. Il log non dimostra che Fortnite abbia ricevuto input.
 
 Per eventuali prove reali, verificare prima le regole di Epic e usare solo un account secondario che si è disposti a perdere: l'automazione può comportare sanzioni. Non sono previste tecniche di elusione dell'anti-cheat.
+
+## Protezione menu e mouse
+
+La lobby deve essere riconosciuta come tale prima di proporre il clic Gioca; una scena `unknown` non autorizza clic sui menu. Nella routine Ignorante i tasti del mouse (piccone, fuoco o clic destro) sono sospesi se l'HUD di partita non è stabile e autorizzato, anche quando manca la cattura. È una protezione aggiuntiva: i vecchi timer possono ancora inviare alcuni tasti di tastiera con scena incerta e non dimostrano l'atterraggio. Non è ancora implementata la nuova macchina a fasi richiesta.

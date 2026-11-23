@@ -13,9 +13,9 @@ class SlowOCRTests(unittest.TestCase):
         for frame in (1., 1.2, 1.4, 2.5, 2.7, 4., 4.2):
             if frame in (1., 2.5, 4.):
                 region['gioca'] = (frame, {'score': .9, 'center': (20, 30)})
-            at, match = _cached_play_match(frame, 'unknown', region, None, 100, 200)
+            at, match = _cached_play_match(frame, 'lobby', region, None, 100, 200)
             offers.append(supervisor.offer(now=frame, frame_at=frame, stage='joining',
-                scene='unknown', matches={'gioca': match}, repeat=True,
+                scene='lobby', matches={'gioca': match}, repeat=True,
                 evidence_times={'gioca': at}))
         self.assertTrue(all(o.action.name == 'wait' for o in offers[:5]))
         self.assertEqual(offers[5].action.name, 'menu_click')
