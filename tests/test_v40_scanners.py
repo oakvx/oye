@@ -226,7 +226,13 @@ class P0IntegrationTests(unittest.TestCase):
         self.addCleanup(d.shutdown)
         store=ScreenProfiles(self.root);store.select(1920,1080)
         store.add_rule('gioca',[.7,.7,.8,.8],image_size=(1920,1080),expected_text='GIOCA')
-        self.assertIn('gioca',d.readiness()['present'])
+        # The readiness gate requires a working OCR executable. This is a
+        # unit test of the taught profile, not of the local Tesseract install.
+        with patch('oye_web_app.ocr_available', return_value=True):
+            self.assertIn('gioca',d.readiness()['present'])
+        with patch('oye_web_app.ocr_available', return_value=False):
+            self.assertNotIn('gioca',d.readiness()['present'])
+            self.assertFalse(d.readiness()['quick_ready'])
     def test_selected_profile_overrides_corrupted_legacy_png(self):
         legacy=self.root/'templates';legacy.mkdir();(legacy/'gioca.png').write_bytes(b'corrupt')
         store=ScreenProfiles(self.root);store.select(1920,1080)

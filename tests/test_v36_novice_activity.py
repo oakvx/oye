@@ -87,6 +87,8 @@ class NovicePolicyTests(unittest.TestCase):
 
     def test_no_frame_controller_still_moves_and_harvests_after_120_seconds(self):
         c = SingleMatchController(quick_start=True, repeat=True, jump_window_seconds=120)
+        # Keep assertions reproducible: production intentionally uses random motifs.
+        c.quick_routine = QuickRoutine(seed=0)
         c.arm_quick(100)
         self.assertEqual(c.quick_without_frame(120).name, 'jump')
         seen = []

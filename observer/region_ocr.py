@@ -36,7 +36,7 @@ def legacy_target_pool(rules,stage,limit,cursor):
     elif stage in ('jumping','exploring'):
         first=('eliminato','spettatore_prossimo','spettatore_precedente','reward_title')
     else:
-        first=('reward_title','riscatta','torna_lobby','continua','gioca_di_nuovo')
+        first=('reward_title','riscatta','gioca_di_nuovo','torna_lobby','continua')
     available=[k for k in PRIORITY if k in rules and (rules[k].get('expected_text') or k in PHRASES)]
     chosen=list(dict.fromkeys(k for k in first if k in available))[:limit]
     remaining=[k for k in available if k not in chosen]
@@ -46,6 +46,24 @@ def legacy_target_pool(rules,stage,limit,cursor):
         chosen += [remaining[(start+i)%len(remaining)] for i in range(min(free,len(remaining)))]
         cursor+=free
     return chosen,cursor
+
+
+def select_legacy_target(pool, stage, turn):
+    """Prioritize the current CTA while rotating other safety/menu regions.
+
+    At most every other legacy OCR slot is reserved; other targets cannot be
+    permanently starved. A turn corresponds to an actual OCR opportunity.
+    """
+    if not pool:
+        return None
+    preferred = ('gioca' if stage in ('await_play', 'joining') else
+                 'gioca_di_nuovo' if stage == 'ending' else None)
+    if preferred not in pool or len(pool) == 1:
+        return pool[turn % len(pool)]
+    if turn % 2 == 0:
+        return preferred
+    others = [target for target in pool if target != preferred]
+    return others[(turn // 2) % len(others)]
 
 
 @dataclass(frozen=True)
@@ -123,6 +141,8 @@ class ScreenRegionOCRWorker:
         self.scanner_cache={}
         self.scheduler=ScannerScheduler(max_visual=(6 if any('Profilo screenshot v42:' in (s.get('description') or '') for s in self.scanners) else 4),max_ocr=1)
         self.legacy_cursor=0
+        self.last_submitted_at=float('-inf')
+        self.submit_lock=threading.Lock()
         self.ocr_turn=0
         self._reload_requested=threading.Event()
         self.scan_history=defaultdict(lambda:deque(maxlen=10))
@@ -166,9 +186,18 @@ class ScreenRegionOCRWorker:
 
     def submit(self, frame, at: float, stage: str = '') -> bool:
         if self.thread is None or self.pending.full() or self.stop_event.is_set():return False
-        try:
-            self.pending.put_nowait((frame.copy(),float(at),stage));return True
-        except queue.Full:return False
+        # Duplicate or out-of-order screenshots must never advance OCR
+        # stability, even if a caller accidentally submits them twice.
+        with self.submit_lock:
+            at = float(at)
+            if not np.isfinite(at) or at <= self.last_submitted_at:
+                return False
+            try:
+                self.pending.put_nowait((frame.copy(),at,stage))
+            except queue.Full:
+                return False
+            self.last_submitted_at = at
+            return True
 
     def take(self):
         latest=None
@@ -177,7 +206,7 @@ class ScreenRegionOCRWorker:
             except queue.Empty:return latest
 
     def _targets(self, stage):
-        pool,self.cursor=legacy_target_pool(self.rules,stage,self.max_per_frame,self.cursor)
+        pool,self.cursor=legacy_target_pool(self.rules,stage,max(5,self.max_per_frame),self.cursor)
         return pool
 
     def previous_crop(self,scanner_id,offset=1):
@@ -226,7 +255,8 @@ class ScreenRegionOCRWorker:
             self.ocr_turn+=1
             if self.allow_ocr and not mismatch and legacy_turn:
                 pool=self._targets(stage)
-                targets=([pool[self.legacy_cursor % len(pool)]] if pool else [])
+                target=select_legacy_target(pool, stage, self.legacy_cursor)
+                targets=[target] if target is not None else []
                 self.legacy_cursor+=bool(pool)
             else:targets=[]
             for target in targets:

@@ -3,6 +3,7 @@
 These tests do not run Fortnite or validate the policy's accuracy on unseen games.
 """
 import sqlite3
+from contextlib import closing
 import tempfile
 import unittest
 from pathlib import Path
@@ -138,13 +139,13 @@ class ReviewTests(unittest.TestCase):
 
     def test_additive_migration_does_not_erase_existing_data(self):
         fid=self.demo()
-        with sqlite3.connect(self.store.path) as db:
+        with closing(sqlite3.connect(self.store.path)) as db, db:
             db.execute('ALTER TABLE frames DROP COLUMN training_excluded')
             db.execute('ALTER TABLE frames DROP COLUMN training_reviewed_at')
         again=LearningStore(self.folder)
         self.assertEqual(again.training_review()['pending'],1)
         self.assertEqual(again.training_review()['items'][0]['id'],fid)
-        with sqlite3.connect(self.store.path) as db:
+        with closing(sqlite3.connect(self.store.path)) as db, db:
             names={row[1] for row in db.execute('PRAGMA table_info(frames)')}
         self.assertIn('training_excluded',names)
         self.assertIn('training_reviewed_at',names)

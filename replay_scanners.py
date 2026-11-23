@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 import json
+import math
 import time
 from dataclasses import replace
 import cv2
@@ -20,7 +21,7 @@ from observer.visual_scanners import scan
 from observer.state_recognition import StateRecognitionEngine
 from observer.scanner_scheduler import ScannerScheduler, result_ttl
 from observer.screen_profiles import ScreenProfiles
-from observer.region_ocr import read_single_region, legacy_target_pool
+from observer.region_ocr import read_single_region, legacy_target_pool, select_legacy_target
 
 def replay(frames, *, root, reader=None):
     store=ScannerStore(root)
@@ -34,9 +35,14 @@ def replay(frames, *, root, reader=None):
     legacy_rules={r['target']:r for r in profiles.rules()}
     legacy_cursor=pool_cursor=ocr_turn=0
     rows=[]
+    last_at = float('-inf')
     for entry in frames:
         path,at=entry[:2]
         stage=entry[2] if len(entry)>2 else ''
+        if not math.isfinite(at) or at <= last_at:
+            rows.append({'file': str(path), 'at': at, 'error': 'Timestamp ripetuto o fuori ordine: fotogramma ignorato'})
+            continue
+        last_at = at
         image=cv2.imread(str(path))
         if image is None:
             rows.append({'file':str(path),'at':at,'error':'Immagine illeggibile'})
@@ -49,9 +55,9 @@ def replay(frames, *, root, reader=None):
         legacy_turn=not modular_ocr or ocr_turn%2==0
         ocr_turn+=1
         if not mismatch and legacy_rules and legacy_turn:
-            pool,pool_cursor=legacy_target_pool(legacy_rules,stage,4,pool_cursor)
+            pool,pool_cursor=legacy_target_pool(legacy_rules,stage,5,pool_cursor)
             if pool:
-                target=pool[legacy_cursor % len(pool)]
+                target=select_legacy_target(pool,stage,legacy_cursor)
                 legacy_cursor+=1
                 legacy[target]=read_single_region(image,legacy_rules[target],reader=reader,at=at).__dict__
         duplicates={'lobby':'gioca','return_to_lobby':'torna_lobby',

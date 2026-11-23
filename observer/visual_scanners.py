@@ -122,7 +122,7 @@ def _structural(crop, kind, options):
                    minLineLength=max(12,int(min(h,w)*.63)),maxLineGap=4)
         sides=set()
         for line in lines if lines is not None else []:
-            x1,y1,x2,y2=map(int,line[0]);dx=abs(x2-x1);dy=abs(y2-y1)
+            x1,y1,x2,y2=map(int,np.asarray(line).reshape(-1));dx=abs(x2-x1);dy=abs(y2-y1)
             if dx>=w*.60 and dy<=max(3,h*.025):
                 y=(y1+y2)/2
                 if y<h*.15:sides.add('top')
@@ -177,7 +177,7 @@ def _structural(crop, kind, options):
                   minLineLength=max(12,int(min(h,w)*.25)),maxLineGap=3)
         vertical=[];horizontal=[]
         for line in lines if lines is not None else []:
-            x1,y1,x2,y2=map(int,line[0]);dx=abs(x2-x1);dy=abs(y2-y1)
+            x1,y1,x2,y2=map(int,np.asarray(line).reshape(-1));dx=abs(x2-x1);dy=abs(y2-y1)
             if dy>h*.25 and dx<=max(3,w*.012):vertical.append((x1+x2)/2)
             if dx>w*.105 and dy<=max(3,h*.012):horizontal.append((y1+y2)/2)
         def clusters(points,gap):

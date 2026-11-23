@@ -29,6 +29,7 @@ class SingleMatchController:
     quick_jump_max_seconds: float = 150.0
     quick_play_seen: bool = False
     quick_absent_frames: int = 0
+    quick_last_absence_at: float = float('-inf')
     quick_play_streak: int = 0
     quick_play_click_attempts: int = 0
     quick_play_last_click_at: float | None = None
@@ -99,6 +100,7 @@ class SingleMatchController:
         self.quick_play_seen = False
         self.quick_departed = False
         self.quick_absent_frames = 0
+        self.quick_last_absence_at = float('-inf')
         self.quick_play_streak = 0
         self.quick_play_click_attempts = 0
         self.quick_play_last_click_at = None
@@ -130,7 +132,8 @@ class SingleMatchController:
                          candidate: Action, menu: str | None = None,
                          play_point: tuple[int, int] | None = None,
                          scene: str = 'unknown',
-                         click_authorized: bool = True) -> Action:
+                         click_authorized: bool = True,
+                         evidence_at: float | None = None) -> Action:
         """Fortnite lobby: detect PLAY, click it, verify it disappears, then wait.
 
         The controller does not rely on Brain's menu-action proposal to ever
@@ -178,6 +181,10 @@ class SingleMatchController:
         if not self.quick_play_seen:
             return self._wait('Non ho ancora visto GIOCA: fammi vedere il pulsante in lobby')
         if not self.quick_departed:
+            if evidence_at is not None:
+                if evidence_at <= self.quick_last_absence_at:
+                    return self._wait(f'GIOCA scomparso? Attendo una nuova lettura ({self.quick_absent_frames}/3)')
+                self.quick_last_absence_at = evidence_at
             self.quick_absent_frames += 1
             if self.quick_absent_frames < 3:
                 return self._wait(f'GIOCA scomparso? Verifica {self.quick_absent_frames}/3, nessun movimento')
@@ -290,6 +297,7 @@ class SingleMatchController:
         self.quick_play_seen = False
         self.quick_departed = False
         self.quick_absent_frames = 0
+        self.quick_last_absence_at = float('-inf')
         self.quick_play_streak = 0
         self.quick_play_click_attempts = 0
         self.quick_play_last_click_at = None
@@ -456,7 +464,8 @@ class SingleMatchController:
                learned_hint: Action | None = None, reward_pending: bool = False,
                play_visible: bool | None = None,
                play_point: tuple[int, int] | None = None,
-               menu_candidate_authorized: bool = True) -> Action:
+               menu_candidate_authorized: bool = True,
+               play_evidence_at: float | None = None) -> Action:
         # A cached frame does not count twice toward a screen transition.
         if frame_at <= self.last_frame_at:
             return self._wait('Fotogramma già analizzato')
@@ -494,7 +503,8 @@ class SingleMatchController:
                 visible = play_visible if play_visible is not None else (True if menu == 'gioca' else None)
                 return self._quick_join_gate(now=now, visible=visible, candidate=candidate,
                                              menu=menu, play_point=play_point, scene=scene,
-                                             click_authorized=menu_candidate_authorized)
+                                             click_authorized=menu_candidate_authorized,
+                                             evidence_at=frame_at if play_evidence_at is None else play_evidence_at)
             if self.play_clicked_at is not None and now - self.play_clicked_at >= 240:
                 self.last_error = 'Ingresso non confermato entro quattro minuti: controllo schermata e matchmaking'
                 if not self.repeat:
@@ -593,7 +603,7 @@ class SingleMatchController:
                     ('continua', 'torna_lobby', 'gioca_di_nuovo') and candidate.name == 'menu_click'
                     and (menu != 'gioca_di_nuovo' or self.repeat)):
                 return candidate
-            return self._wait('Fine partita: attendo CONTINUA / TORNA ALLA LOBBY')
+            return self._wait('Fine partita: attendo GIOCA DI NUOVO / CONTINUA / TORNA ALLA LOBBY')
 
         # Manual time-only start is NOT a verified match. A persistent false
         # PLAY/lobby match must not re-arm the workflow and silently stop W.
