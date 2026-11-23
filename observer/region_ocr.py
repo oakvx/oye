@@ -107,7 +107,7 @@ def read_single_region(frame: np.ndarray, rule: dict, *, reader: Callable[[np.nd
         score=fragment_score(text,phrases)
         if target=='gioca_di_nuovo':
             t=set(normalize(text).split())
-            if not ({'gioca','nuovo'}<=t or {'play','again'}<=t):score=0.
+            if not ({'gioca','nuovo'}<=t or {'gioca','ancora'}<=t or {'play','again'}<=t):score=0.
         return RegionReading(target,at,normalize(text)[:120],score,score>=.81,False,center,'ok')
     except Exception as exc:
         return RegionReading(target,at,'',0.,False,False,center,'ocr_error:'+type(exc).__name__)

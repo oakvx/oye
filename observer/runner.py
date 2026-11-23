@@ -28,6 +28,9 @@ from .guided import SimpleMatchRoutine
 from .timed_mode import TimedMatchRoutine
 from .reward_ocr import RewardOCRWorker
 from .phase_ocr import PhaseOCRWorker
+from .ignorante import FINAL_SIGNALS, MAX_FRAME_AGE, IgnoranteController
+from .ignorante_ocr import cycle_ocr_worker, match_frame, playable_scene, valid_capture
+from .quick_routine import QuickRoutine
 from .region_ocr import ScreenRegionOCRWorker
 from .screen_profiles import ScreenProfiles
 from .phase_gate import PhaseGate
@@ -115,8 +118,8 @@ class Runner:
                  repeat_matches: bool = False, quick_start: bool = False,
                  quick_wait_play_exit: bool = True):
         self.single_match = bool(single_match)
-        self.repeat_matches = bool(repeat_matches)
         self.quick_start = bool(quick_start and single_match)
+        self.repeat_matches = bool(repeat_matches or self.quick_start)
         self.quick_wait_play_exit = bool(self.quick_start and quick_wait_play_exit)
         if self.repeat_matches and not self.single_match:
             raise ValueError("Il ciclo richiede la modalità partita")
@@ -136,9 +139,6 @@ class Runner:
         self.timed = bool(self.guided and self.cfg['guided_timed_enabled'] and not self.single_match)
         if self.cfg['autonomous_enabled'] and not live:
             raise ValueError('Guida autonoma: abilita esplicitamente gli input LIVE')
-        # A manually armed timer does not require Tesseract to detect the HUD.
-        # Without OCR only previously calibrated visual menu cues can veto it.
-        # Never claim spectator/reboot recognition is available in that case.
         self._startup_warnings: list[str] = []
         try:
             try:
@@ -187,6 +187,7 @@ class Runner:
                 raise ValueError('Per il ciclo lobby completo calibra tutti i pulsanti: ' + ', '.join(missing))
         self.stop_event = threading.Event()
         self.pause_event = threading.Event()
+        self._quick_interrupted = threading.Event()
         self.messages: queue.Queue = queue.Queue(maxsize=160)
         self.thread: threading.Thread | None = None
         self.audio = None
@@ -315,6 +316,7 @@ class Runner:
         self.log_path = self.root / 'logs' / f'sessione_{datetime.now().strftime("%Y%m%d_%H%M%S")}.jsonl'
         self.stop_event.clear()
         self.pause_event.clear()
+        self._quick_interrupted.clear()
         self._manual_stop = False
         self._button_positive_at.clear()
         self._button_logged_at.clear()
@@ -332,6 +334,8 @@ class Runner:
             self._emit('lifecycle', 'Ripresa')
             return False
         self.pause_event.set()
+        if self.quick_start:
+            self._quick_interrupted.set()
         self._emit('lifecycle', 'Pausa: input sospesi')
         return True
 
@@ -367,8 +371,6 @@ class Runner:
         last_policy_refresh = float('-inf')
         last_fast_report = float('-inf')
         last_input_report = float('-inf')
-        last_quick_wait_report = float('-inf')
-        last_quick_wait_reason = ''
         last_idle_report = float('-inf')
         last_speed_report = float('-inf')
         capture_times = deque(maxlen=48)
@@ -411,22 +413,15 @@ class Runner:
         play_evidence = PlayEvidence()
         last_phase_ocr_label = 'normal'
         last_phase_ocr_error = ''
-        quick_ocr_fault = False
-        quick_ocr_last_ok = float('-inf')
         phase_focus_epoch = float('-inf')
         reboot_reentry_armed = False
         unknown_watchdog = UnknownWatchdog()
         last_single_recovery_count = 0
         last_phase_marker = None
         single = (SingleMatchController(
-            quick_start=self.quick_start,
-            quick_wait_play_exit=self.quick_wait_play_exit,
-            quick_loading_seconds=float(self.cfg['ignorante_loading_wait_seconds']),
-            quick_jump_min_seconds=float(self.cfg['ignorante_jump_min_seconds']),
-            quick_jump_max_seconds=float(self.cfg['ignorante_jump_max_seconds']),
             repeat=self.repeat_matches,
             jump_window_seconds=float(self.cfg['single_match_jump_seconds']),
-            jump_period_seconds=float(self.cfg['ignorante_jump_interval_seconds'] if self.quick_wait_play_exit else self.cfg['single_match_jump_interval_seconds']),
+            jump_period_seconds=float(self.cfg['single_match_jump_interval_seconds']),
             harvest=self.cfg['guided_explore_harvest'],
             smooth=self.cfg['guided_smooth_enabled'],
             profile=self.cfg['guided_activity_profile'],
@@ -458,17 +453,21 @@ class Runner:
                 ('Ripresa di una sessione interrotta: verifico tre nuove schermate, senza input' if resume_gate.active
                  else 'Contatore delle partite precedenti recuperato; nuova sessione avviata normalmente'),
                 info={'matches_completed': single.matches_completed, 'resume_pending': resume_gate.active})
-        if single is not None and self.quick_start:
-            single.arm_quick(time.monotonic())
-            self._emit('quick_timer', (
-                'IGNORANTE: aspetto GIOCA, poi tre schermate senza GIOCA, 120 secondi di caricamento, 120–150 secondi solo Spazio, infine WASD/piccone.'
-                if self.quick_wait_play_exit else
-                'IGNORANTE ARMATO: 20 secondi effettivi con Fortnite in primo piano, poi Space/WASD/piccone; F8 pausa, F9 stop.'))
+        ignorante = (IgnoranteController(time.monotonic(), matches_completed=single.matches_completed)
+                     if self.quick_start else None)
+        quick_routine = QuickRoutine(seed=self.seed) if ignorante else None
+        quick_ocr = None
+        quick_frames = {}
+        quick_submit_at = float('-inf')
+        quick_observed_at = float('-inf')
+        quick_modular_at = None
+        quick_report = None
+        cycle_status = ignorante or single
+        if ignorante is not None:
+            self._emit('single_match', 'Ignorante: attendo Gioca e Annulla prima del movimento. F8 pausa, F9 stop.')
             from .reward_ocr import ocr_available
             if not self.cfg['ocr_enabled'] or not ocr_available():
-                self._emit('ocr_notice', 'OCR non disponibile: avvio temporizzato consentito, ma schermate '
-                           'SPETTATORE/RIAVVIO non riconoscibili tramite testo. '
-                           'Restano attivi solo i riferimenti visivi insegnati; verifica Tesseract.')
+                self._emit('ocr_notice', 'Ignorante attende la lettura dei pulsanti. Attiva OCR e verifica Tesseract.')
         if single is not None and self.repeat_matches:
             try:
                 save_checkpoint(self.checkpoint_path, stage='await_play',
@@ -523,35 +522,49 @@ class Runner:
                       solo_mode=bool((self.timed or self.single_match) and self.cfg['guided_solo_mode']))
         driver = None
         try:
-            driver = Driver(live=self.live, allowed=self._allowed, config=self.cfg,
+            def allowed_input():
+                allowed = self._allowed()
+                if ignorante is not None and not allowed:
+                    self._quick_interrupted.set()
+                return allowed
+
+            driver = Driver(live=self.live, allowed=allowed_input, config=self.cfg,
                             stop=self.stop_event, paused=self.pause_event)
+            def report_quick():
+                nonlocal quick_report
+                status = (ignorante.stage, ignorante.last_signal, ignorante.reason,
+                          ignorante.matches_completed)
+                if status != quick_report:
+                    self._emit('single_match', f'{ignorante.label} · {ignorante.reason}', info={
+                        'guided_stage': ignorante.stage, 'phase': ignorante.label,
+                        'last_signal': ignorante.last_signal, 'reason': ignorante.reason,
+                        'matches_completed': ignorante.matches_completed})
+                    quick_report = status
+
             def quick_without_frame(now: float, detail: str):
-                """Run user-armed IGNORANTE even with zero frames or broken recognition."""
-                nonlocal actions_count, last_driver_feedback, last_telemetry_report
-                if (single is None or not self.quick_start or self.pause_event.is_set()
-                        or self.stop_event.is_set() or not self._allowed()):
-                    return
-                action = single.quick_without_frame(now)
-                if self.quick_wait_play_exit:
-                    action = _ignorante_mouse_gate(action, scene='unknown', gameplay_authorized=False)
-                if action.name != 'wait':
-                    sent = driver.run(action)
-                    if sent:
-                        actions_count += 1
-                    last_driver_feedback = ('Comando trasmesso (non verificato dal gioco)' if sent else
-                                            'ERRORE: comando NON trasmesso, verifica input/focus')
-                    self._emit('decision', f'{action.name}: {action.reason}',
-                               info={'scene': 'unknown', 'capture': detail, 'quick': True, 'sent': sent})
-                if now - last_telemetry_report >= 0.7:
+                nonlocal last_telemetry_report, reward_verified, reward_last
+                nonlocal reward_overlay_streak, reward_overlay_checked_at, reward_overlay_suspect_at
+                nonlocal phase_focus_epoch, quick_modular_at
+                driver.release()
+                phase_focus_epoch = max(phase_focus_epoch, now)
+                quick_frames.clear()
+                quick_modular_at = None
+                region_recent.clear()
+                region_frame_windows.clear()
+                reward_ocr_ok_times.clear()
+                region_reward_scans.clear()
+                reward_verified = reward_last = None
+                reward_overlay_streak = 0
+                reward_overlay_checked_at = reward_overlay_suspect_at = float('-inf')
+                menu_supervisor.invalidate_observations()
+                ignorante.interrupt(now, detail)
+                report_quick()
+                if now - last_telemetry_report >= .7:
                     self._emit('telemetry', '', info={
-                        'scene': 'unknown', 'capture': detail, 'hud': 'non necessario',
-                        'ocr_phase': 'non disponibile', 'phase': single.label,
-                        'phase_detail': 'IGNORANTE: tempo indipendente dagli screenshot',
-                        'objective': 'IGNORANTE: salti, WASD casuale e piccone',
-                        'action': action.name, 'reason': action.reason,
-                        'input_status': last_driver_feedback,
-                        'matches_completed': single.matches_completed,
-                    })
+                        'phase': ignorante.label, 'last_signal': ignorante.last_signal,
+                        'reason': ignorante.reason, 'capture': detail, 'action': 'wait',
+                        'authorized': False, 'halted': ignorante.stage == 'error',
+                        'matches_completed': ignorante.matches_completed})
                     last_telemetry_report = now
 
             def timed_without_frame(now: float):
@@ -601,7 +614,7 @@ class Runner:
                 self.audio = SoundWatcher(self.root / 'cassa.wav', threshold=self.cfg['audio_threshold'])
                 self.audio.start()
                 self._emit('audio', 'Rilevamento audio sperimentale attivo')
-            if self.cfg['learning_enabled']:
+            if self.cfg['learning_enabled'] and ignorante is None:
                 try:
                     engine = LearningEngine(
                         self.root / 'learning', ocr_enabled=self.cfg['ocr_enabled'],
@@ -714,7 +727,9 @@ class Runner:
                     self.planner.start()
                     self._emit('agent', 'Modalità ibrida: policy rapida locale, modello visivo asincrono solo se incerto')
                 elif self.autonomous and self.guided:
-                    if self.single_match:
+                    if ignorante is not None:
+                        self._emit('agent', 'IGNORANTE: ciclo verificato dai pulsanti e movimento casuale')
+                    elif self.single_match:
                         self._emit('agent', 'UNA PARTITA: Gioca → HUD stabile → salto + movimento per 120 s → esplora → risultati → torna in lobby → STOP')
                     elif self.timed:
                         self._emit('agent', 'Routine A TEMPO: attesa 90 s configurabile → Spazio periodico a durata limitata → '
@@ -739,6 +754,9 @@ class Runner:
             if self.cfg['ocr_enabled']:
                 self.phase_ocr = PhaseOCRWorker(self.cfg['ocr_languages'])
                 self.phase_ocr.start()
+                if ignorante is not None:
+                    quick_ocr = cycle_ocr_worker(self.cfg['ocr_languages'])
+                    quick_ocr.start()
                 self._emit('phase_ocr', 'OCR delle fasi attivo: SPETTATORE / ATTESA RIAVVIO; '
                            'i testi non autorizzano mai tasti, conferma HUD necessaria per riprendere.')
             if self.cfg['async_capture_enabled']:
@@ -768,6 +786,9 @@ class Runner:
                                ': nuovo blocco di monitoraggio; partita invariata')
                 if self.pause_event.is_set():
                     phase_focus_epoch = time.monotonic()
+                    if ignorante is not None:
+                        quick_without_frame(phase_focus_epoch, 'Pausa')
+                        self._quick_interrupted.clear()
                     play_evidence.reset()
                     region_recent.clear()
                     scanner_play_recent = None
@@ -791,6 +812,8 @@ class Runner:
                 win = foreground_window(self.cfg['window_executables'])
                 if win is None:
                     phase_focus_epoch = time.monotonic()
+                    if ignorante is not None:
+                        quick_without_frame(phase_focus_epoch, 'Fortnite non in primo piano')
                     play_evidence.reset()
                     # Do not reuse an in-flight OCR result after alt-tab, even
                     # if the same window returns to the same coordinates.
@@ -825,6 +848,8 @@ class Runner:
                     continue
                 if win != last_ocr_window:
                     phase_focus_epoch = time.monotonic()
+                    if ignorante is not None:
+                        quick_without_frame(phase_focus_epoch, 'Verifico la finestra di Fortnite')
                     play_evidence.reset()
                     # OCR points and stability belong to the window geometry
                     # on which they were measured, not to a later placement.
@@ -835,6 +860,9 @@ class Runner:
                     if menu_supervisor is not None:
                         menu_supervisor.invalidate_observations()
                     last_ocr_window = win
+                if ignorante is not None and self._quick_interrupted.is_set():
+                    self._quick_interrupted.clear()
+                    quick_without_frame(time.monotonic(), 'Verifico lo stato dopo l’interruzione')
                 if self._last_focus_notice:
                     self._emit('focus', f'Finestra verificata: {win.executable}')
                     self._last_focus_notice = False
@@ -888,6 +916,10 @@ class Runner:
                     capture_times.append((time.perf_counter() - capture_started) * 1000)
                     frame_ages.append(0.)
                 live_frames_received += 1
+                if ignorante is not None and not valid_capture(frame):
+                    quick_without_frame(time.monotonic(), 'Immagine nera o non valida')
+                    self.stop_event.wait(.10)
+                    continue
                 if timed is not None and not timed_started:
                     timed_started = True
                     if self.cfg['guided_timed_start_on_launch']:
@@ -906,6 +938,12 @@ class Runner:
                 vision_started = time.perf_counter()
                 try:
                     reading = self.vision.recognize(frame, win.left, win.top)
+                    raw_reading = replace(reading, best=dict(reading.best)) if ignorante is not None else reading
+                    if quick_ocr is not None and captured_at > ignorante.last_frame_at and captured_at - quick_submit_at >= .45:
+                        if quick_ocr.submit(frame, captured_at):
+                            quick_submit_at = captured_at
+                            quick_frames[captured_at] = raw_reading
+                            quick_frames = {t: r for t, r in quick_frames.items() if captured_at - t <= 4.0}
                     play_signals = []
                     play_veto_scene = reading.scene if reading.scene in PlayEvidence.VETO_SCENES else 'unknown'
                     if reading.phase_hint in ('battle_bus', 'skydiving'):
@@ -956,6 +994,9 @@ class Runner:
                                        fusion.get('candidate')==fusion.get('state') and
                                        fusion.get('confidence',0)>=.47 and
                                        bool(fusion.get('evidence')))
+                            if ignorante is not None:
+                                quick_modular_at = (regional['at'] if confirmed and fusion['state'] in
+                                    ('IN_MATCH', 'LANDED', 'BATTLE_BUS', 'SKYDIVING', 'GLIDING') else None)
                             if confirmed:
                                 # Only use confirmed ROI fusion evidence. Hard
                                 # legacy spectator/rewards signals retain priority.
@@ -1141,14 +1182,16 @@ class Runner:
                         if self.phase_ocr.submit(frame, captured_at):
                             last_phase_ocr_submit = captured_at
                     phase_ocr_result = self.phase_ocr.take()
+                    if (ignorante is not None and phase_ocr_result is not None and
+                            phase_ocr_result.at <= phase_focus_epoch):
+                        phase_ocr_result = None
+                phase_scene = ('match' if ignorante is not None and playable_scene(raw_reading)
+                               and not raw_reading.best.keys() & FINAL_SIGNALS else reading.scene)
                 overlay = phase_gate.observe(
-                    phase_ocr_result, scene=reading.scene,
+                    phase_ocr_result, scene=phase_scene,
                     menu=reading.menu.name if reading.menu else None, at=captured_at,
                     allow_solo_return=bool((timed is not None or single is not None) and self.cfg['guided_solo_mode']))
                 if phase_ocr_result is not None and phase_ocr_result.status != 'ok':
-                    if self.quick_start:
-                        # Fail closed until an operational OCR sample arrives.
-                        quick_ocr_fault = True
                     if phase_ocr_result.status != last_phase_ocr_error:
                         last_phase_ocr_error = phase_ocr_result.status
                         self._emit('phase_ocr_error', 'OCR fasi non disponibile: ' + phase_ocr_result.status +
@@ -1162,8 +1205,6 @@ class Runner:
                             matched=phase_ocr_result.cue == cue,
                             text=phase_ocr_result.text[:120], label=label,
                             count_scan=i==0)
-                    quick_ocr_fault = False
-                    quick_ocr_last_ok = phase_ocr_result.at
                 if overlay.state != last_phase_ocr_label:
                     self._emit('phase_ocr', overlay.detail,
                                info={'ocr_phase': overlay.state,
@@ -1198,12 +1239,15 @@ class Runner:
                 # sufficient: same screen location must recur in two OCR frames.
                 reward_overlay_confirmed = False
                 reward_overlay_pending = False
-                if self.reward_ocr is not None:
+                if self.reward_ocr is not None and (ignorante is None or
+                        ignorante.stage in ('await_play', 'returning', 'lobby')):
                     if now - last_reward_ocr >= 2.0:
                         if self.reward_ocr.submit(frame, win.left, win.top, captured_at,
                                                   single.stage if single else ''):
                             last_reward_ocr = now
                     reward = self.reward_ocr.take()
+                    if ignorante is not None and reward is not None and reward.at <= phase_focus_epoch:
+                        reward = None
                     if reward is not None:
                         if reward.status == 'ok' and 0 <= now - reward.at <= 5.0:
                             # Include the existing results/rewards OCR in the
@@ -1218,7 +1262,7 @@ class Runner:
                                     matched=bool(found), text=label if found else '',
                                     confidence=reward.score if reward.center is not None else float(bool(found)),
                                     label=label, count_scan=i==0)
-                            reward_ocr_ok_times.append(now)
+                            reward_ocr_ok_times.append(reward.at if ignorante is not None else now)
                         # Count only distinct fresh OCR captures, never dozens
                         # of game frames reusing a cached OCR result.
                         if reward.status == 'ok' and 0 <= now - reward.at <= 5.0 and reward.reward_screen:
@@ -1399,7 +1443,7 @@ class Runner:
                             f'{self.demonstration_worker.errors} errori; {reason}')
                         last_demo_report = now
                         demo_status = reason
-                if (self.autonomous and reading.scene == 'results' and
+                if (ignorante is None and self.autonomous and reading.scene == 'results' and
                         brain.scene_streak >= 3 and now - last_idle_report >= 6):
                     if reading.menu is None:
                         why = 'Risultati/ricompense: nessun pulsante cliccabile riconosciuto. Usa «Fammelo vedere» e mostrami Riscatta, Continua o Torna alla lobby.'
@@ -1451,7 +1495,123 @@ class Runner:
                         # A menu action from Brain remains valid only when
                         # confidently identified/calibrated; the routine owns
                         # bus, fall and walking actions in all other scenes.
-                        if single is not None:
+                        if ignorante is not None:
+                            menu_target = None
+                            menu_offer = None
+                            decision = ignorante.waiting(time.monotonic()).action
+                            authorized = False
+                            result = quick_ocr.take() if quick_ocr is not None else None
+                            source = quick_frames.pop(result.at, None) if result is not None else None
+                            if source is not None and result.at > ignorante.last_frame_at:
+                                quick_observed_at = result.at
+                                modular_at = (quick_modular_at if quick_modular_at is not None and
+                                              max(ignorante.dispatch_at, phase_focus_epoch,
+                                                  result.at - 2.0) < quick_modular_at <= result.at else None)
+                                observed = match_frame(result, source, left=win.left, top=win.top,
+                                                       locked=overlay.hold, modular_at=modular_at)
+                                observed = replace(observed, valid=observed.valid and
+                                                   0 <= time.monotonic() - observed.at <= MAX_FRAME_AGE)
+                                results_visible = bool(observed.signals & FINAL_SIGNALS)
+                                was_playing = ignorante.stage == 'playing'
+                                if (observed.valid and not results_visible and
+                                        ignorante.stage == 'returning' and reward_overlay_confirmed):
+                                    ignorante.returned_to_lobby(result.at)
+                                lobby_phase = ignorante.stage in ('await_play', 'lobby')
+                                reward_hold = lobby_phase and (reward_overlay_confirmed or reward_overlay_pending
+                                                               or single.stage == 'claim_rewards')
+                                if lobby_phase and not results_visible and (
+                                        reward_hold or not reward_scan_confirmed):
+                                    observed = replace(observed, buttons={}, blocked=True)
+                                offer = ignorante.observe(observed, now=time.monotonic())
+                                decision, menu_target = offer.action, offer.name
+                                if menu_target is not None:
+                                    menu_offer = offer
+                                    menu_evidence_at[menu_target] = observed.at
+                                if (menu_target == 'gioca' and captured_at > observed.at and
+                                        raw_reading.best.keys() & (FINAL_SIGNALS | {'annulla'})):
+                                    decision = ignorante.interrupt(captured_at, 'Nuova schermata da verificare').action
+                                if (ignorante.stage == 'lobby' and single.stage == 'await_play'):
+                                    single.stage = 'post_lobby'
+                                    single.post_lobby_at = time.monotonic()
+                                    single.stable_lobby = 0
+                                if (observed.valid and not results_visible and
+                                        ignorante.stage in ('await_play', 'lobby') and
+                                        (ignorante.stage == 'lobby' or reward_hold)):
+                                    reward_scene = ('results' if reward_overlay_confirmed else
+                                                    'lobby' if 'gioca' in observed.signals else reading.scene)
+                                    reward_targets = {name: match for name, match in reading.best.items()
+                                                      if name == 'riscatta' and reward_overlay_confirmed}
+                                    if 'gioca' in observed.signals and not reward_hold:
+                                        play = result.matches.get('gioca')
+                                        if play is not None:
+                                            reward_targets['gioca'] = play  # transition evidence only
+                                    menu_offer = menu_supervisor.offer(
+                                        now=time.monotonic(), frame_at=observed.at, stage=single.stage,
+                                        scene=reward_scene, matches=reward_targets, repeat=True,
+                                        reward_overlay=reward_overlay_confirmed, locked=overlay.hold,
+                                        reward_scan_confirmed=False, evidence_times=menu_evidence_at)
+                                    reward_name = menu_offer.name or ('gioca' if 'gioca' in observed.signals else None)
+                                    decision = single.decide(
+                                        now=time.monotonic(), frame_at=observed.at, scene=reward_scene,
+                                        menu=reward_name, candidate=menu_offer.action, authorized=False,
+                                        locked=overlay.hold, spectator=False, reward_scan_confirmed=reward_scan_confirmed,
+                                        reward_overlay=reward_overlay_confirmed)
+                                    menu_target = menu_offer.name if decision.name == 'menu_click' else None
+                                    if single.stage == 'await_play':
+                                        menu_supervisor.reset()
+                                    if ignorante.stage == 'lobby' and single.stage == 'await_play':
+                                        ignorante.lobby_ready(time.monotonic())
+                                    ignorante.reason = decision.reason
+                                elif lobby_phase and not results_visible and not reward_scan_confirmed and observed.valid:
+                                    ignorante.reason = 'Attendo due letture OCR delle ricompense'
+                                    decision = Action('wait', reason=ignorante.reason)
+                                if offer.move:
+                                    # A newer template detection can arrive while OCR is still reading.
+                                    newer_stop = (captured_at > observed.at and
+                                                  bool(raw_reading.best.keys() & (FINAL_SIGNALS | {'annulla'})))
+                                    if newer_stop or overlay.hold:
+                                        decision = ignorante.interrupt(captured_at, 'Nuova schermata da verificare').action
+                                    else:
+                                        if not was_playing:
+                                            quick_routine.reset()
+                                        authorized = True
+                                        decision = (Action('jump', .16, reason=offer.action.reason) if not was_playing
+                                                    else quick_routine.next_action(harvest=single.harvest))
+                                        ground_hud = playable_scene(source) and source.phase_hint is None
+                                        decision = _ignorante_mouse_gate(
+                                            decision, scene='match' if ground_hud else source.scene,
+                                            gameplay_authorized=ground_hud)
+                            elif quick_ocr is None:
+                                decision = ignorante.interrupt(captured_at, 'OCR disattivato').action
+                            elif (ignorante.stage == 'playing' and
+                                  (raw_reading.best.keys() & FINAL_SIGNALS or overlay.hold)):
+                                driver.release()
+                                ignorante.resume_required = True
+                                decision = Action('wait', reason='Schermata da verificare')
+                            elif ignorante.stage == 'playing' and captured_at - quick_observed_at > 3:
+                                decision = ignorante.interrupt(ignorante.last_frame_at, 'Lettura OCR scaduta').action
+                            if decision.name == 'wait':
+                                driver.release()
+                            report_quick()
+                            if (self.repeat_matches and (ignorante.stage != last_checkpoint_stage or
+                                    ignorante.matches_completed != last_checkpoint_matches)):
+                                try:
+                                    save_checkpoint(self.checkpoint_path, stage=ignorante.stage,
+                                                    matches_completed=ignorante.matches_completed,
+                                                    active=ignorante.stage != 'error')
+                                    if cycle_store is not None:
+                                        cycle_store.record(
+                                            stage=ignorante.stage, previous_stage=last_checkpoint_stage,
+                                            event=('match_completed' if ignorante.matches_completed > last_cycle_matches
+                                                   else 'visual_transition'),
+                                            matches_completed=ignorante.matches_completed,
+                                            active=ignorante.stage != 'error')
+                                    last_checkpoint_stage = ignorante.stage
+                                    last_checkpoint_matches = ignorante.matches_completed
+                                    last_cycle_matches = ignorante.matches_completed
+                                except Exception as exc:
+                                    self._emit('checkpoint_error', str(exc)[:140])
+                        elif single is not None:
                             if authorized and captured_at > last_route_eval + .75:
                                 hint = route_hint(frame)
                                 single.explorer.observe_route(hint)
@@ -1461,10 +1621,10 @@ class Runner:
                             menu_offer = None
                             menu_target = None
                             play_confirmation = None
-                            if (not self.quick_start and not resume_gate.active and single.stage in ('jumping', 'exploring')
+                            if (not resume_gate.active and single.stage in ('jumping', 'exploring')
                                     and self.fast_policy is not None
                                     and self.fast_policy.examples >= 3
-                                    and (authorized or (self.quick_start and reading.scene == 'unknown'))
+                                    and authorized
                                     and not overlay.hold and not reward_overlay_pending
                                     and not reward_overlay_confirmed
                                     and now - last_fast_action >= float(self.cfg['fast_policy_interval_seconds'])):
@@ -1492,14 +1652,8 @@ class Runner:
                                 now = time.monotonic()
                                 if overlay.hold or brain.spectator_latched or reward_overlay_confirmed or reward_overlay_pending:
                                     play_veto_scene = 'results'
-                                phase_ocr_ready = (not quick_ocr_fault and quick_ocr_last_ok >= phase_focus_epoch
-                                                   and 0 <= now - quick_ocr_last_ok <= 12.)
-                                if self.quick_wait_play_exit and not phase_ocr_ready:
-                                    play_evidence.reset()
-                                    play_confirmation = None
-                                else:
-                                    play_confirmation = play_evidence.update(now=now, window=win, focused=True,
-                                        signals=play_signals, scene=play_veto_scene)
+                                play_confirmation = play_evidence.update(now=now, window=win, focused=True,
+                                    signals=play_signals, scene=play_veto_scene)
                                 if play_confirmation is not None:
                                     self._emit('play_confirmation', 'GIOCA: tre coppie template/OCR concordi',
                                         info={'signals': [{'source': x.source, 'method': x.method,
@@ -1517,7 +1671,6 @@ class Runner:
                                     reward_scan_confirmed=reward_scan_confirmed,
                                     locked=overlay.hold, spectator=brain.spectator_latched,
                                     evidence_times=menu_evidence_at,
-                                    prefer_requeue=self.quick_wait_play_exit,
                                     require_play_confirmation=True, play_confirmation=play_confirmation)
                                 if menu_supervisor.last_completed == 'gioca_di_nuovo':
                                     single.on_requeue_confirmed(now)
@@ -1597,21 +1750,6 @@ class Runner:
                                         'Cronologia SQLite non aggiornata: ' + str(exc)[:140])
                                 last_cycle_stage = single.stage
                                 last_cycle_matches = single.matches_completed
-                            if (self.quick_wait_play_exit and single.stage == 'joining' and
-                                    decision.name == 'wait' and menu_offer is not None and
-                                    ('gioca' in reading.best or self._play_visibility(reading, now) is True) and
-                                    decision.reason.startswith('GIOCA visibile')):
-                                decision = Action('wait', reason='GIOCA: ' + menu_offer.detail)
-                            if (self.quick_start and decision.name == 'wait' and
-                                    (now - last_quick_wait_report >= 6 or
-                                     (decision.reason != last_quick_wait_reason and
-                                      now - last_quick_wait_report >= 1.5))):
-                                self._emit('quick_wait', decision.reason,
-                                    info={'phase': single.stage, 'scene': reading.scene,
-                                          'ocr_locked': overlay.hold,
-                                          'ocr_available': not quick_ocr_fault and now - quick_ocr_last_ok <= 12})
-                                last_quick_wait_report = now
-                                last_quick_wait_reason = decision.reason
                             if (single.stage in ('post_lobby','claim_rewards') and
                                     now - last_idle_report >= 8):
                                 self._emit('reward',
@@ -1863,7 +2001,7 @@ class Runner:
                 if self.exploration_worker:
                     self.exploration_worker.submit(frame, session=session_id,
                                                    scene=reading.scene, ocr=self._last_ocr_text)
-                if reading.scene != last_scene:
+                if ignorante is None and reading.scene != last_scene:
                     if reading.scene != 'match':
                         last_visual_feedback = 'Nessuna nuova misura di locomozione in questa fase'
                         last_driver_feedback = 'Input di locomozione non autorizzati in questa schermata'
@@ -1882,14 +2020,14 @@ class Runner:
                     if learning_store is not None and not self.autonomous:
                         learning_store.mark_session(session_id, 'state', title)
                     last_scene = reading.scene
-                if was_spectator_latched and not brain.spectator_latched:
+                if ignorante is None and was_spectator_latched and not brain.spectator_latched:
                     self._emit('state', 'Uscita dallo stato spettatore confermata: '
                                + ('riavvio riuscito' if reading.scene == 'match' else 'nuovo stato conclusivo'))
                 was_spectator_latched = brain.spectator_latched
-                if reading.scene == 'unknown' and phase_hint is None and now - self._last_unknown_notice > 30:
+                if ignorante is None and reading.scene == 'unknown' and phase_hint is None and now - self._last_unknown_notice > 30:
                     hud_info = (f'{reading.hud.core_votes}/{reading.hud.core_configured} indizi stabili; '
                                 + reading.hud.reason if reading.hud else 'nessun HUD calibrato riconosciuto')
-                    self._emit('scene', f'Schermata non identificata ({hud_info}). ' + ('Routine a tempo attiva: HUD solo diagnostico.' if (self.timed or self.quick_start) else 'Nessun input.'))
+                    self._emit('scene', f'Schermata non identificata ({hud_info}). ' + ('Routine a tempo attiva: HUD solo diagnostico.' if self.timed else 'Nessun input.'))
                     self._last_unknown_notice = now
                 unknown_state = unknown_watchdog.observe(now=now, scene=reading.scene,
                     live=self.live, timed=(self.timed or self.quick_start), repeat=self.repeat_matches)
@@ -1942,17 +2080,14 @@ class Runner:
                             'hud_confidence': reading.hud.confidence if reading.hud else 0.,
                         })
                     last_preview = now
-                # No independent menu-click implementations inside the match:
-                # only supervisor-authorized coordinates may reach the driver.
+                # Only the click proposed by the active lifecycle may reach the driver.
                 if single is not None and decision.name == 'menu_click' and (
                         menu_target is None or menu_offer is None or
+                        menu_offer.name != menu_target or
                         menu_offer.action.name != 'menu_click' or
                         menu_offer.action.point != decision.point):
                     self._emit('menu_blocked','Clic menu rifiutato: nessuna transazione verificata')
                     decision=Action('wait',reason='Menu: attendo riconoscimento e conferme')
-                if self.quick_wait_play_exit and single is not None and single.stage in ('jumping', 'exploring'):
-                    decision = _ignorante_mouse_gate(decision, scene=reading.scene,
-                                                     gameplay_authorized=authorized)
                 if self.live and decision.name == 'menu_click':
                     checked_at = time.monotonic()
                     reason = _menu_click_guard(decision.point, win,
@@ -1991,12 +2126,19 @@ class Runner:
                         if single is not None:
                             old_stage = single.stage
                             menu_name = (menu_target if 'menu_target' in locals() else None)
-                            if decision.name == 'menu_click' and menu_name is not None and menu_supervisor is not None:
+                            lifecycle_click = (ignorante is not None and decision.name == 'menu_click'
+                                               and menu_name in ('gioca', 'gioca_di_nuovo', 'torna_lobby'))
+                            if lifecycle_click:
+                                ignorante.on_clicked(menu_name, time.monotonic())
+                                self._emit('menu_sent', f'{menu_name}: clic inviato, attendo conferma',
+                                           info={'menu_target': menu_name, 'verified': False})
+                            elif decision.name == 'menu_click' and menu_name is not None and menu_supervisor is not None:
                                 menu_supervisor.on_executed(menu_name, decision,
                                     now=time.monotonic(), scene=reading.scene)
                                 self._emit('menu_sent', menu_supervisor.last_event,
                                     info={'menu_target':menu_name, 'verified':False})
-                            single.on_executed(decision, menu_name, time.monotonic())
+                            if not lifecycle_click:
+                                single.on_executed(decision, menu_name, time.monotonic())
                             if cycle_store is not None:
                                 if single.stage != old_stage:
                                     try:
@@ -2055,20 +2197,19 @@ class Runner:
                         'capture': f'{live_frames_received} frame ricevuti · ultimo {max(0., (time.monotonic() - captured_at) * 1000.):.0f} ms fa',
                         'hud': (f'{reading.hud.votes}/{reading.hud.configured} riconosciuti'
                                 if reading.hud is not None else 'nessun riferimento HUD'),
-                        'phase': single.label if single is not None else timed.stage if timed is not None else phase_label,
-                        'matches_completed': single.matches_completed if single is not None else 0,
-                        'phase_detail': (('Avvio rapido a tempo: stato di gioco NON verificato' if self.quick_start else
-                                          'Ciclo automatico: verifiche visive attive' if single.repeat else
+                        'phase': cycle_status.label if cycle_status is not None else timed.stage if timed is not None else phase_label,
+                        'matches_completed': cycle_status.matches_completed if cycle_status is not None else 0,
+                        'last_signal': ignorante.last_signal if ignorante is not None else '',
+                        'phase_detail': (ignorante.last_signal if ignorante is not None else
+                                        ('Ciclo automatico: verifiche visive attive' if single.repeat else
                                           'Ciclo singolo: verifiche visive attive') if single is not None else 'Fase stimata dai tempi, non verificata visivamente'
                                          if timed is not None else estimate.detail),
-                        'objective': objective,
+                        'objective': ignorante.reason if ignorante is not None else objective,
                         'activity': activity,
                         'behavior_profile': self.cfg['guided_activity_profile'] if self.guided else '—',
                         'action': decision.name,
                         'reason': decision.reason,
-                        'authorized': bool(authorized or (single is not None and self.quick_start and
-                                           single.stage in ('jumping', 'exploring') and not overlay.hold and
-                                           reading.scene not in ('spectator', 'results', 'lobby')) or
+                        'authorized': bool(authorized or
                                            (timed is not None and timed.stage in ('jumping', 'ground'))),
                         'input_status': last_driver_feedback,
                         'visual_feedback': last_visual_feedback,
@@ -2078,7 +2219,8 @@ class Runner:
                         'resume_pending': resume_gate.active,
                         'recovery_detail': (single.explorer.last_feedback if single else ''),
                         'recoveries': (single.explorer.recovery_count if single else guided.explorer.recovery_count if guided else 0),
-                        'halted': bool(single.explorer.halted if single else guided.explorer.halted) if guided else False,
+                        'halted': (ignorante.stage == 'error' if ignorante is not None else
+                                   bool(single.explorer.halted if single else guided.explorer.halted) if guided else False),
                     })
                     last_telemetry_report = now
                 if self.autonomous and now - last_speed_report >= 10. and len(capture_times) >= 2:
@@ -2119,18 +2261,23 @@ class Runner:
         except Exception as exc:
             self._emit('error', f'{type(exc).__name__}: {exc}')
         finally:
-            if cycle_store is not None and single is not None:
+            if driver:
                 try:
-                    cycle_store.record(stage=single.stage,previous_stage=single.stage,
+                    driver.release()
+                except Exception as exc:
+                    self._emit('error', f'Rilascio input: {exc}')
+            if cycle_store is not None and cycle_status is not None:
+                try:
+                    cycle_store.record(stage=cycle_status.stage,previous_stage=cycle_status.stage,
                         event='session_stopped' if self._manual_stop else 'process_exited',
-                        matches_completed=single.matches_completed,active=False)
+                        matches_completed=cycle_status.matches_completed,active=False)
                 except Exception as exc:
                     self._emit('cycle_db_error','Chiusura SQLite: '+str(exc)[:140])
-            if self.repeat_matches and single is not None:
+            if self.repeat_matches and cycle_status is not None:
                 try:
-                    save_checkpoint(self.checkpoint_path, stage=single.stage,
-                                    matches_completed=single.matches_completed,
-                                    active=not self._manual_stop and single.stage not in ('done', 'error'))
+                    save_checkpoint(self.checkpoint_path, stage=cycle_status.stage,
+                                    matches_completed=cycle_status.matches_completed,
+                                    active=not self._manual_stop and cycle_status.stage not in ('done', 'error'))
                 except OSError as exc:
                     self._emit('checkpoint_error', 'Ultimo checkpoint non salvato: ' + str(exc)[:140])
             # Shut down capture before releasing other resources. The grabber
@@ -2141,6 +2288,8 @@ class Runner:
                 self.reward_ocr.stop()
             if self.phase_ocr:
                 self.phase_ocr.stop(timeout=1.5)
+            if quick_ocr:
+                quick_ocr.stop(timeout=.2)
             if self.frame_stream:
                 self.frame_stream.stop(timeout=2.)
             close_capture()
@@ -2148,11 +2297,6 @@ class Runner:
             self._demo_allowed.clear()
             if self.demonstration_worker:
                 self.demonstration_worker.stop(timeout=.7)
-            if driver:
-                try:
-                    driver.release()
-                except Exception as exc:
-                    self._emit('error', f'Rilascio input: {exc}')
             if self.audio:
                 self.audio.stop()
             if self.planner:

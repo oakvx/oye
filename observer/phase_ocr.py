@@ -56,8 +56,9 @@ class PhaseOCRResult:
 class PhaseOCRWorker:
     """One-slot latest-frame worker with bounded Tesseract execution time."""
 
-    def __init__(self, languages: str = 'eng'):
+    def __init__(self, languages: str = 'eng', *, analyzer=None):
         self.languages = languages
+        self.analyzer = analyzer
         self._pending: queue.Queue = queue.Queue(maxsize=1)
         self._result: queue.Queue = queue.Queue(maxsize=1)
         self._stop = threading.Event()
@@ -128,20 +129,10 @@ class PhaseOCRWorker:
                 break
             frame, at = item
             try:
-                # The initial call to the general OCR engine locates the Windows
-                # Tesseract binary when it is absent from PATH.
-                import pytesseract
-                import shutil
-                import sys
-                from pathlib import Path
-                if sys.platform == 'win32' and not shutil.which('tesseract'):
-                    for p in (Path('C:/Program Files/Tesseract-OCR/tesseract.exe'),
-                              Path('C:/Program Files (x86)/Tesseract-OCR/tesseract.exe')):
-                        if p.is_file():
-                            pytesseract.pytesseract.tesseract_cmd = str(p)
-                            break
-                text = self._read_text(frame, self.languages)
-                result = PhaseOCRResult(at, 'ok', classify_phase(text), normalize(text)[:300])
+                if self.analyzer is not None:
+                    result = self.analyzer(frame, at)
+                else:
+                    result = self._analyze(frame, at)
             except ImportError:
                 result = PhaseOCRResult(at, 'not_installed')
             except Exception as exc:
@@ -159,3 +150,10 @@ class PhaseOCRWorker:
                     self._result.put_nowait(result)
                 except queue.Full:
                     pass
+
+    def _analyze(self, frame, at):
+        from .teach_ocr import _configure_tesseract
+
+        _configure_tesseract()
+        text = self._read_text(frame, self.languages)
+        return PhaseOCRResult(at, 'ok', classify_phase(text), normalize(text)[:300])

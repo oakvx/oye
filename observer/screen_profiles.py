@@ -19,7 +19,9 @@ from .teach_ocr import PHRASES
 # Only actions already understood by the controller. A free-form description is
 # documentation/training context, never Python or an executable instruction.
 BEHAVIOUR = {
-    'gioca': ('lobby', 'Aspetta che Gioca scompaia; poi parte il caricamento'),
+    'gioca': ('lobby', 'Riconosci il pulsante Gioca in basso a sinistra'),
+    'annulla': ('loading', 'Riconosci la ricerca partita'),
+    'posizione_finale': ('results', 'Riconosci la fine della partita'),
     'lobby_indizio': ('lobby', 'Riconosci la lobby, non muovere il personaggio'),
     'caricamento': ('loading', 'Aspetta la fine del caricamento'),
     'bus_salto': ('bus', 'Indizio del bus; rispetta la sequenza della modalità scelta'),

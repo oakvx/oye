@@ -63,9 +63,10 @@ TEACH_STEPS = {
     'hud_in_partita': ('HUD partita', 'Mostrami un indicatore di partita riconoscibile sullo schermo.', 'point'),
 }
 
-MENU_LEARNING_ORDER = ('gioca', 'torna_lobby', 'reward_title', 'riscatta', 'continua')
+MENU_LEARNING_ORDER = ('gioca', 'torna_lobby', 'reward_title', 'riscatta', 'continua', 'gioca_di_nuovo')
 REQUIRED_BASE = ('gioca', 'spettatore_prossimo', 'spettatore_precedente')
 DISPLAY_NAMES = {
+    'annulla': 'Annulla', 'posizione_finale': 'Posizione finale',
     'gioca': 'Gioca', 'reward_title': 'Ricompensa ottenuta', 'riscatta': 'Riscatta', 'continua': 'Continua', 'torna_lobby': 'Torna alla lobby', 'gioca_di_nuovo': 'Gioca di nuovo',
     'spettatore_prossimo': 'Spettatore · prossimo',
     'spettatore_precedente': 'Spettatore · precedente',
@@ -262,7 +263,7 @@ class Dashboard:
             missing.extend([x for x in ('hud_salute', 'hud_inventario', 'hud_minimappa')
                             if x not in found][:2-len(hud)])
         return {
-            'quick_ready': 'gioca' in found and not issues,
+            'quick_ready': ocr_ready,
             'menu_text': load_references(self.root / 'templates'),
             'ready': not missing and not issues,
             'invalid': invalid,
@@ -613,6 +614,7 @@ class Dashboard:
                 'ocr': self.telemetry.get('ocr_phase') or self.last_frame_info.get('ocr_phase') or 'unknown',
                 'action': self.telemetry.get('action') or 'wait',
                 'reason': self.telemetry.get('reason') or 'Nessuna sessione attiva',
+                'last_signal': self.telemetry.get('last_signal') or '',
                 'input_status': self.telemetry.get('input_status') or 'Nessun input inviato',
                 'camera': self.telemetry.get('camera_feedback') or 'Da verificare',
                 'hud': self.telemetry.get('hud') or 'Da calibrare',
@@ -662,8 +664,8 @@ class Dashboard:
                 raise ValueError('Conferma esplicitamente gli input LIVE per questa sessione')
             if mode in ('quick_cycle', 'auto_cycle', 'single_match'):
                 audit = self.readiness()
-                if mode == 'quick_cycle' and 'gioca' not in audit['present']:
-                    raise ValueError('Ignorante deve vedere GIOCA prima di partire. Apri «Fammelo vedere» e mostrami GIOCA nella lobby.')
+                if mode == 'quick_cycle' and not audit['quick_ready']:
+                    raise ValueError('Ignorante richiede OCR attivo e Tesseract per leggere i pulsanti.')
                 if mode != 'quick_cycle' and audit['missing']:
                     details = '; '.join(DISPLAY_NAMES.get(x,x) + ': ' + audit['invalid'][x]
                                         for x in audit['missing'] if x in audit['invalid'])
@@ -674,7 +676,8 @@ class Dashboard:
                     raise ValueError('Calibrazione non valida: ' + '; '.join(audit['issues']))
             cfg = load(self.root/'config.json')
             cfg.update({k:v for k,v in flags.items() if k not in ('live','exploration')})
-            cfg['learning_enabled'] = True
+            if mode != 'quick_cycle':
+                cfg['learning_enabled'] = True
             if mode == 'train':
                 cfg['demonstration_mouse_shoot'] = True  # record left mouse with W/A/S/D/Space
             save(self.root/'config.json', cfg)
@@ -699,7 +702,7 @@ class Dashboard:
                 self.runtime_issue = ''
                 self.runtime_next_step = ''
                 self.telemetry_at = 0.0
-                self._log('Avviata ' + {'quick_cycle':'Ignorante a tempo', 'auto_cycle':'Ciclo continuo', 'single_match':'Una partita', 'observe':'Osservazione',
+                self._log('Avviata ' + {'quick_cycle':'Ignorante', 'auto_cycle':'Ciclo continuo', 'single_match':'Una partita', 'observe':'Osservazione',
                                      'train':'Apprendimento', 'guided':'Esplorazione'}[mode], 'lifecycle')
             except Exception as exc:
                 self.error = str(exc)

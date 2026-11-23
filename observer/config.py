@@ -7,7 +7,7 @@ from .hud import HUD_ANCHORS
 from .behavior import PROFILES
 
 TEMPLATE_NAMES = (
-    'hud_in_partita', 'gioca', 'lobby_indizio', 'continua', 'torna_lobby', 'gioca_di_nuovo', 'riscatta', 'reward_title',
+    'hud_in_partita', 'gioca', 'annulla', 'posizione_finale', 'lobby_indizio', 'continua', 'torna_lobby', 'gioca_di_nuovo', 'riscatta', 'reward_title',
     'caricamento', 'eliminato', 'spettatore_prossimo', 'spettatore_precedente',
     'interazione', 'cassa_visiva', 'bus_salto', 'discesa_apri',
 ) + HUD_ANCHORS

@@ -30,7 +30,9 @@ PHRASES = {
     'riscatta': ('riscatta', 'riscattare', 'claim', 'collect'),
     'reward_title': ('ricompensa ottenuta', 'ricompense ottenute', 'reward obtained', 'rewards unlocked'),
     'continua': ('continua', 'continue'),
-    'gioca_di_nuovo': ('gioca di nuovo', 'play again'),
+    'gioca_di_nuovo': ('gioca di nuovo', 'gioca ancora', 'play again'),
+    'annulla': ('annulla', 'cancel'),
+    'posizione_finale': ('posizione finale', 'final placement'),
     'torna_lobby': ('torna alla lobby', 'ritorna alla lobby', 'return to lobby', 'back to lobby'),
 }
 

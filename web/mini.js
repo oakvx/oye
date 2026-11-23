@@ -6,8 +6,8 @@ async function api(name,data){const head={'X-Oye-Token':token},options={headers:
 function toast(text){$('#toast').textContent=text;$('#toast').classList.add('visible');setTimeout(()=>$('#toast').classList.remove('visible'),3800)}
 function studio(hash=''){const path='/studio?token='+encodeURIComponent(token)+(hash||'');const w=window.open(path,'_blank');if(!w)location.href=path}
 function update(st){running=!!st.running;paused=!!st.paused;$('#pulse').classList.toggle('active',running&&!paused);$('#mode-state').textContent=paused?'SESSIONE IN PAUSA':running?'SESSIONE ATTIVA':'CONTROLLO IN ATTESA';$('#status').innerHTML=(paused?'In pausa':running?'Oye è attivo':'In attesa')+'<span>.</span>';
-const scene=st.scene||'unknown';$('#phase').textContent=({match:'IN PARTITA',lobby:'IN LOBBY',results:'RISULTATI',spectator:'SPETTATORE',loading:'CARICAMENTO',unknown:'SCHERMATA NON NOTA'})[scene]||scene.toUpperCase();
-$('#description').textContent=st.diagnostic?.attention||st.reason||'Nessuna sessione attiva';$('#games').textContent=st.matches_completed??0;
+const scene=st.scene||'unknown';$('#phase').textContent=st.mode==='quick_cycle'?st.phase:({match:'IN PARTITA',lobby:'IN LOBBY',results:'RISULTATI',spectator:'SPETTATORE',loading:'CARICAMENTO',unknown:'SCHERMATA NON NOTA'})[scene]||scene.toUpperCase();
+$('#description').textContent=(st.mode==='quick_cycle'&&running?[st.reason,st.last_signal].filter(Boolean).join(' · '):st.diagnostic?.attention||st.reason)||'Nessuna sessione attiva';$('#games').textContent=st.matches_completed??0;
 const detections=st.ocr_detections||{};
 $('#ocr-discoveries').textContent=detections.session_total??0;
 $('#ocr-discovery-total').textContent='Storico: '+(detections.all_time_total??0);

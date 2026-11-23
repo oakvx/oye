@@ -216,38 +216,9 @@ class SingleMatchController:
         return self._wait(f'Solo salti: {max(0.,self.quick_jump_target_seconds-self.elapsed):.0f} s restanti')
 
     def quick_without_frame(self, now: float) -> Action:
-        """Independent fallback when capture/vision fails after manual authorization.
-
-        It never clicks menu coordinates or fabricates OCR. Focus, Stop and Pause
-        are still enforced by Runner/Driver before this method is called.
-        """
-        if not self.quick_start:
-            return self._wait('Fallback riservato alla modalità Ignorante')
-        if self.quick_wait_play_exit and self.stage == 'joining':
-            if not self.quick_departed:
-                return self._wait('Gioca non ancora scomparso: cattura necessaria, nessun tasto')
-            self._advance_quick_clock(now)
-            if self.quick_wait_elapsed >= self.quick_loading_seconds:
-                return self._begin_quick_activity(now)
-            return self._wait(f'Attesa caricamento: {self.quick_loading_seconds-self.quick_wait_elapsed:.0f} s')
-        if self.stage == 'joining' and self.play_clicked_at is not None:
-            self._advance_quick_clock(now)
-            if self.quick_wait_elapsed >= self.quick_delay_seconds:
-                return self._begin_quick_activity(now)
-            return self._wait(f'IGNORANTE: countdown {max(0., self.quick_delay_seconds-self.quick_wait_elapsed):.0f} s, immagini non necessarie')
-        if self.stage not in ('jumping', 'exploring'):
-            return self._wait('IGNORANTE: attesa schermata finale; non invento clic')
-        if self.last_tick is not None:
-            self.elapsed += max(0., min(3.5, now - self.last_tick))
-        self.last_tick = now
-        if self.quick_wait_play_exit and self.stage == 'jumping':
-            return self._quick_jump_only(now)
-        if self.stage == 'jumping' and self.elapsed >= self.jump_window_seconds:
-            self.stage = 'exploring'
-        if self.stage == 'jumping' and self.elapsed - self.last_jump_elapsed >= self.jump_period_seconds:
-            self.last_jump_elapsed = self.elapsed
-            return Action('jump', .16, reason='IGNORANTE: Space temporizzato senza immagini')
-        return self.quick_routine.next_action(harvest=self.harvest)
+        """Keep the legacy call safe while capture is unavailable."""
+        self.suspend_clock()
+        return self._wait('Acquisizione non disponibile: input sospesi')
 
     def _reset_explorer(self):
         self.explorer = GuidedExplorer(harvest=self.harvest, smooth=self.smooth,

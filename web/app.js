@@ -17,7 +17,7 @@ let pendingMode = 'auto_cycle';
 let busy = false;
 let toastTimer = 0;
 const modeDescriptions = {
-  quick_cycle:'Oye preme GIOCA e rimane fermo finché lo vede. Dopo tre immagini senza GIOCA attende 120 s, preme solo Spazio per 120–150 s e infine cammina con WASD e piccona. Se non conosce GIOCA, insegnaglielo prima. Stop F9; Pausa F8.',
+  quick_cycle:'Oye preme Gioca in basso a sinistra, attende Annulla e si muove quando la ricerca è terminata. Nei risultati prova Gioca di nuovo, poi Ritorna alla lobby. F8 pausa, F9 stop.',
   auto_cycle:'Gioca → si muove → riscatta le ricompense → torna alla lobby → ricomincia. Fino a STOP.',
   single_match:'Esegue una sola partita, riscatta le ricompense e si ferma alla lobby.',
   observe:'Guarda Fortnite senza mai premere un tasto.',
@@ -101,7 +101,7 @@ function calibrationLabels(ready){
   const core=['hud_salute','hud_inventario','hud_minimappa'];
   const shownHUD=ready.hud_legacy?['hud_in_partita']:
     [...new Set([...core.filter(x=>ready.present.includes(x)),...core])].slice(0,2);
-  const steps=[...new Set([...['gioca','riscatta','continua','torna_lobby','spettatore_prossimo','spettatore_precedente'],...shownHUD,...ready.present])];
+  const steps=[...new Set([...['gioca','riscatta','continua','torna_lobby','gioca_di_nuovo','spettatore_prossimo','spettatore_precedente'],...shownHUD,...ready.present])];
   q('#cal-progress').textContent=ready.ready?'PRONTO PER UNA PARTITA':(ready.issues?.length?'METADATI DA CORREGGERE': 'MANCANO '+ready.missing.length+' RIFERIMENTI');
   q('#cal-total').textContent=ready.present.length+' RIFERIMENTI SALVATI';
   q('#cal-list').replaceChildren();q('#template-select').replaceChildren();
@@ -165,12 +165,12 @@ function applyStatus(status){
   const currentState=status.state||'idle';const running=!!status.running;
   q('#header-status').className='status-chip '+currentState;
   setText(q('#status-text'),currentState==='running'?'SESSIONE IN CORSO':currentState==='paused'?'IN PAUSA':(q('#mode-select').value==='quick_cycle'?status.readiness?.quick_ready:status.readiness?.ready)?'PRONTO':'DA INSEGNARE');
-  setText(q('#view-phase'),status.scene==='unknown'?status.phase:(friendlyScene[status.scene]||status.scene||'Nessuna sessione').toUpperCase());
+  setText(q('#view-phase'),status.mode==='quick_cycle'||status.scene==='unknown'?status.phase:(friendlyScene[status.scene]||status.scene||'Nessuna sessione').toUpperCase());
   setText(q('#ocr-phase'),'OCR: '+formatOCR(status.ocr));
   setText(q('#hud-reading'),status.hud||'Da verificare');
   setText(q('#frame-label'),status.frame_count?'FRAME '+status.frame_count:'NESSUN SEGNALE');
   setText(q('#current-action'),running?(prettyAction[status.action]||status.action||'In osservazione'):'Nessuna azione');
-  setText(q('#action-reason'),running?status.reason:'La sessione non è ancora stata avviata.');
+  setText(q('#action-reason'),running?[status.reason,status.last_signal].filter(Boolean).join(' · '):'La sessione non è ancora stata avviata.');
   setText(q('#input-message'),status.input_status);
   setText(q('#mini-phase'),status.phase||'—');
   setText(q('#matches-completed'),status.matches_completed??0);
@@ -200,12 +200,12 @@ function applyStatus(status){
   const ready=status.readiness||{ready:false,missing:[],present:[],labels:{}};
   const quick=q('#mode-select').value==='quick_cycle';
   const modeReady=quick?!!ready.quick_ready:!!ready.ready;
-  const readinessText=modeReady?'PRONTO PER UNA PARTITA':'MI MANCA '+(ready.labels?.[quick?'gioca':ready.missing[0]]||'UN RIFERIMENTO');
+  const readinessText=modeReady?'PRONTO PER UNA PARTITA':quick?'SERVE OCR TESSERACT':'MI MANCA '+(ready.labels?.[ready.missing[0]]||'UN RIFERIMENTO');
   q('#readiness-line').classList.toggle('missing',!modeReady);
   q('#show-me-home').hidden=false;
   q('#show-me-home').disabled=running;
   q('#readiness-line').lastElementChild.textContent=readinessText;
-  q('#readiness-line').onclick=()=>{if(!modeReady)openTeaching('gioca')};
+  q('#readiness-line').onclick=()=>{if(!modeReady&&!quick)openTeaching('gioca')};
   renderTeaching(status.teach,ready,running,status.calibration.busy);
   q('#cal-status').textContent=status.calibration.error||status.calibration.message;
   q('#cal-status').style.color=status.calibration.error?'#ff837e':'';
@@ -236,10 +236,6 @@ function syncSettings(settings){
   q('#pickaxe-setting').value=settings.keys.pickaxe;
   setText(q('#bind-pickaxe'),String(settings.keys.pickaxe).toUpperCase());
   q('#camera-setting').value=settings.camera_pixels;
-  q('#ignorante-loading').value=settings.ignorante_loading_wait_seconds;
-  q('#ignorante-jump-min').value=settings.ignorante_jump_min_seconds;
-  q('#ignorante-jump-interval').value=settings.ignorante_jump_interval_seconds;
-  q('#ignorante-jump-max').value=settings.ignorante_jump_max_seconds;
   q('#learning-setting').checked=settings.use_learning;
   q('#smooth-setting').checked=settings.smooth;
   q('#recovery-setting').value=settings.recovery_limit;
@@ -301,7 +297,7 @@ function register(){
     q('#start-btn').firstChild.textContent=({'quick_cycle':'AVVIA IGNORANTE ', 'auto_cycle':'AVVIA IL CICLO ', 'single_match':'AVVIA UNA PARTITA ','observe':'INIZIA OSSERVAZIONE ',train:'REGISTRA UNA PARTITA ',guided:'AVVIA ESPLORAZIONE '})[e.target.value]||'AVVIA ';});
   q('#start-btn').addEventListener('click',()=>{
     pendingMode=q('#mode-select').value;
-    if(pendingMode==='quick_cycle' && current && !current.readiness.quick_ready){openTeaching('gioca');return}
+    if(pendingMode==='quick_cycle' && current && !current.readiness.quick_ready){notify('Attiva OCR nelle impostazioni e verifica Tesseract.',true);return}
     if(['auto_cycle','single_match'].includes(pendingMode) && current && !current.readiness.ready){openTeaching();return}
     if(pendingMode==='observe'||pendingMode==='train'){launch(pendingMode,false);return}
     showConfirmation();
@@ -368,10 +364,6 @@ q('#teach-capture-btn').addEventListener('click',async()=>{
       jump_interval:Number(q('#interval-setting').value),camera_pixels:Number(q('#camera-setting').value),
       harvest:q('#harvest-setting').checked,ocr_enabled:q('#ocr-setting').checked,
       pickaxe_key:q('#pickaxe-setting').value,
-      ignorante_loading_wait_seconds:Number(q('#ignorante-loading').value),
-      ignorante_jump_min_seconds:Number(q('#ignorante-jump-min').value),
-      ignorante_jump_interval_seconds:Number(q('#ignorante-jump-interval').value),
-      ignorante_jump_max_seconds:Number(q('#ignorante-jump-max').value),
       use_learning:q('#learning-setting').checked,smooth:q('#smooth-setting').checked,
       recovery_limit:Number(q('#recovery-setting').value),motion_threshold:Number(q('#motion-setting').value),
       min_fall:Number(q('#fall-setting').value),ollama_enabled:q('#ollama-setting').checked,

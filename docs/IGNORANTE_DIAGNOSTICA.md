@@ -1,4 +1,18 @@
-# Modalità Ignorante: verifica di Gioca
+# Modalità Ignorante
+
+## Ciclo attuale
+
+Per avviare Ignorante dalla dashboard occorrono OCR attivo e Tesseract. Il ciclo conferma il pulsante **Gioca** in basso a sinistra su due acquisizioni. Dopo il clic aspetta due letture di **Annulla** e poi tre acquisizioni valide senza Annulla distribuite su almeno un secondo. A quel punto parte la routine casuale.
+
+La prima lettura di **Posizione finale** o dei pulsanti dei risultati sospende gli input. Il ciclo conferma la schermata, conta la partita e preferisce **Gioca di nuovo**. Se durante il riavvio diretto Annulla non compare, servono due riscontri positivi dai riconoscitori di gioco. Dopo 15 secondi di risultati senza il pulsante di riavvio, usa **Ritorna alla lobby** se confermato e verifica le ricompense prima di ripartire.
+
+La dashboard mostra fase, ultimo segnale e motivo dell'attesa. Dopo al massimo tre tentativi a 12 secondi di distanza, il ciclo attende una conferma visiva. L'attesa di ingresso scade dopo quattro minuti. F8 mette in pausa e F9 arresta.
+
+Per verificare il ciclo senza input reali, esegui `python -m pytest tests/test_ignorante_cycle.py tests/test_ignorante_replay_frames.py`. Il replay OCR usa i fotogrammi locali di `learning/frames/` o `frames/` e richiede Tesseract.
+
+---
+
+Le sezioni successive descrivono l'implementazione precedente e le relative verifiche.
 
 La sequenza della dashboard resta quella descritta in `IGNORANTE_V38.md`: osservazione di Gioca, eventuale clic autorizzato, conferma della scomparsa, attesa del caricamento, salti e routine. F8 mette in pausa, F9 ferma; Fortnite deve essere in primo piano.
 

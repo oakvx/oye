@@ -99,13 +99,13 @@ class LobbyGateTests(unittest.TestCase):
         self.assertTrue(any(x in seq for x in ('patrol_forward','strafe_left','strafe_right')))
         self.assertIn('patrol_harvest',seq)
 
-    def test_after_confirmed_exit_screen_loss_cannot_reset_timers(self):
+    def test_after_confirmed_exit_screen_loss_blocks_input(self):
         c=controller()
         tick(c,1,play=True)
         for t in (2,3,4):tick(c,t)
         self.assertEqual(c.quick_without_frame(123).name,'wait')
-        self.assertEqual(c.quick_without_frame(124).name,'jump')
-        self.assertIn(c.quick_without_frame(125.8).name,('wait','jump'))
+        self.assertEqual(c.quick_without_frame(124).name,'wait')
+        self.assertEqual(c.quick_without_frame(125.8).name,'wait')
 
     def test_pause_does_not_consume_loading_time(self):
         c=controller()
@@ -142,15 +142,16 @@ class EasyTrainingTests(unittest.TestCase):
             self.assertNotIn(('new','harvest'),names)
             self.assertEqual(store.confirm_latest_demonstration()['confirmed'],0)
 
-    def test_dashboard_ignorable_hud_but_requires_play_training(self):
+    def test_dashboard_requires_ocr_for_visual_cycle(self):
         with tempfile.TemporaryDirectory() as td:
             d=Dashboard(Path(td))
             try:
                 with patch('oye_web_app.Runner') as runner_type,patch.object(d,'_start_hotkeys'):
-                    with self.assertRaisesRegex(ValueError,'GIOCA'):
-                        d.start('quick_cycle',confirmed=True)
+                    with patch('oye_web_app.ocr_available', return_value=False):
+                        with self.assertRaisesRegex(ValueError,'Tesseract'):
+                            d.start('quick_cycle',confirmed=True)
                     runner_type.assert_not_called()
-                    with patch.object(d,'readiness',return_value={'present':['gioca'], 'issues':[], 'missing':[], 'ready':False}):
+                    with patch('oye_web_app.ocr_available', return_value=True):
                         runner_type.return_value.thread=None
                         d.start('quick_cycle',confirmed=True)
                         self.assertTrue(runner_type.call_args.kwargs['quick_wait_play_exit'])

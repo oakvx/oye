@@ -91,23 +91,11 @@ class NovicePolicyTests(unittest.TestCase):
         self.assertEqual(q.next_action(harvest=True).name, 'equip_pickaxe')
         self.assertEqual(q.next_action(harvest=True).name, 'patrol_forward')
 
-    def test_no_frame_controller_still_moves_and_harvests_after_120_seconds(self):
-        c = SingleMatchController(quick_start=True, repeat=True, jump_window_seconds=120)
-        # Keep assertions reproducible: production intentionally chooses random directions.
-        c.quick_routine = QuickRoutine(seed=0)
-        c.arm_quick(100)
-        self.assertEqual(c.quick_without_frame(120).name, 'jump')
-        seen = []
-        # No screenshot, OCR or HUD throughout; virtual clock continues.
-        for i in range(140):
-            action = c.quick_without_frame(120.1 + i * 1.0)
-            seen.append(action.name)
-        self.assertEqual(c.stage, 'exploring')
-        self.assertIn('patrol_harvest', seen[-45:])
-        self.assertIn('patrol_hop', seen[-45:])
-        self.assertIn('strafe_left', seen[-45:])
-        self.assertIn('patrol_forward', seen[-45:])
-        self.assertTrue(all(x != 'wait' for x in seen))
+    def test_no_frame_controller_waits_even_during_movement(self):
+        c = SingleMatchController(quick_start=True, repeat=True, stage='exploring')
+        for at in (100, 120, 240):
+            self.assertEqual(c.quick_without_frame(at).name, 'wait')
+        self.assertEqual(c.quick_routine.index, 0)
 
 
 class MouseButtonRegressionTests(unittest.TestCase):

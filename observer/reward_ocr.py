@@ -111,7 +111,7 @@ def extract_results_button(data: dict, *, scale: float, left: int, top: int,
         if ((('torna' in line or 'ritorna' in line) and 'lobby' in line) or
                 ('return' in line and 'lobby' in line)):
             name = 'torna_lobby'
-        elif ('gioca' in line and 'nuovo' in line) or ('play' in line and 'again' in line):
+        elif line in (['gioca', 'di', 'nuovo'], ['gioca', 'ancora'], ['play', 'again']):
             name = 'gioca_di_nuovo'
         elif 'continua' in line or 'continue' in line:
             name = 'continua'
