@@ -25,7 +25,7 @@ class SlowOCRTests(unittest.TestCase):
     def test_cached_ocr_expires_and_never_overrides_other_scenes(self):
         scanner = (1., Match('gioca', .9, (4, 5)))
         self.assertEqual(_cached_play_match(2, 'lobby', {}, scanner, 0, 0), scanner)
-        self.assertIsNone(_cached_play_match(4.4, 'lobby', {}, scanner, 0, 0))
+        self.assertIsNone(_cached_play_match(8.5, 'lobby', {}, scanner, 0, 0))
         self.assertIsNone(_cached_play_match(2, 'results', {}, scanner, 0, 0))
         self.assertIsNone(_cached_play_match(.5, 'lobby', {}, scanner, 0, 0))
 
@@ -54,4 +54,44 @@ class SlowResultOCRTests(unittest.TestCase):
                   for name in ('gioca_di_nuovo', 'riscatta')}
         self.assertEqual(set(_cached_result_menu_matches(2, 'results', region, 0, 0)), {'gioca_di_nuovo'})
         self.assertEqual(_cached_result_menu_matches(2, 'lobby', region, 0, 0), {})
-        self.assertEqual(_cached_result_menu_matches(5, 'results', region, 0, 0), {})
+        self.assertEqual(_cached_result_menu_matches(9, 'results', region, 0, 0), {})
+
+class RealisticOCRCadenceTests(unittest.TestCase):
+    def test_gaps_do_not_turn_cached_readings_into_clicks(self):
+        from observer.runner import _cached_result_menu_matches
+        for name, stage, scene in (('gioca', 'joining', 'lobby'),
+                                   ('gioca_di_nuovo', 'ending', 'results')):
+            supervisor = MenuSupervisor()
+            region = {}
+            proposed = []
+            # 1.4 s submit cadence, alternate modular and legacy turns,
+            # preferred ROI every other legacy slot => one read per 5.6 s.
+            for i in range(57):
+                t = round(i * .2, 1)
+                if i in (0, 28, 56):
+                    region[name] = (t, {'score': .9, 'center': (20, 30)})
+                if name == 'gioca':
+                    evidence = _cached_play_match(t, scene, region, None, 100, 200)
+                else:
+                    evidence = _cached_result_menu_matches(t, scene, region, 100, 200).get(name)
+                matches = {name: evidence[1]} if evidence else {}
+                times = {name: evidence[0]} if evidence else {}
+                offer = supervisor.offer(now=t, frame_at=t, stage=stage, scene=scene,
+                    matches=matches, repeat=True, evidence_times=times)
+                if offer.action.name == 'menu_click':
+                    proposed.append(t)
+            self.assertEqual(proposed, [11.2], name)
+
+    def test_button_evidence_logging_does_not_invent_fresh_samples(self):
+        from observer.runner import Runner
+        runner = object.__new__(Runner)
+        runner._button_positive_at = {}
+        runner._button_logged_at = {}
+        events = []
+        runner._emit = lambda kind, message, info: events.append((kind, info))
+        runner._record_button_evidence('gioca', 'ocr_zona', 1., .9, 'present', 2.)
+        runner._record_button_evidence('gioca', 'ocr_zona', 1., .9, 'present', 3.)
+        runner._record_button_evidence('gioca', 'ocr_zona', 6.6, .8, 'present', 7.)
+        self.assertEqual(len(events), 2)
+        self.assertEqual(events[1][1]['since_previous_positive_seconds'], 5.6)
+        self.assertEqual(events[1][1]['age_seconds'], .4)

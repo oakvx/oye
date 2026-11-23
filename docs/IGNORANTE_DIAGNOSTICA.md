@@ -27,3 +27,13 @@ La scomparsa di Gioca richiede tre osservazioni negative distinte: una lettura O
 ## Clic e finestra reale
 
 Prima di ogni clic di menu LIVE, Oye ricontrolla che la finestra in primo piano corrisponda a quella del fotogramma, che immagine e lettura siano recenti e che il punto sia nell'area client. Quando la finestra cambia posizione o perde il focus, le conferme e i risultati OCR in corso legati alla vecchia finestra vengono scartati; i tentativi di clic già inviati restano conteggiati. Un messaggio `menu_blocked` spiega il motivo del rifiuto. Questo riduce il rischio di coordinate obsolete, ma non elimina la possibile variazione di focus durante la singola chiamata al sistema operativo e non dimostra che il gioco abbia ricevuto il clic.
+
+## Misura cadenza OCR (passo 1)
+
+Flusso: cattura della finestra → `Vision` e OCR/scanner di ROI asincroni → fusione degli scanner e priorità della scena → `SingleMatchController` e `MenuSupervisor` → controllo finestra/freschezza → driver → nuova acquisizione per verificare l'esito. Il controller mantiene ancora propri stati e timer: non è ancora un'unica macchina a evidenza.
+
+Con submit ogni 1,4 s, turni legacy/modulari alterni e target preferito ogni due turni legacy, l'intervallo teorico fra letture della stessa zona è **5,6 s**, oltre il precedente TTL di 3,4 s. La durata effettiva dipende dalla coda, dal tempo OCR e dai frame ricevuti; 5,6 s non è una misura su Fortnite. Quando la cache scadeva, `MenuSupervisor` poteva azzerare il conteggio. Ora la lettura positiva si conserva per massimo 7,5 s come **continuità diagnostica**, ma oltre 4 s non è utilizzabile per autorizzare un clic. Sono sempre necessarie tre letture con timestamp distinti; un'assenza o un errore aggiornato invalida la relativa cache. Un intervallo più lungo può ancora azzerare le conferme: non c'è garanzia di cadenza.
+
+Il log `button_evidence` riporta per le nuove letture positive del template e le letture effettive OCR/scanner: pulsante, fonte, timestamp monotono originale, punteggio disponibile, stato, intervallo dalla precedente lettura positiva della stessa fonte ed età al momento dell'osservazione. Il timestamp monotono ha senso solo nella stessa sessione; il punteggio non è probabilità. I punteggi negativi dei template non sono attualmente esposti da `Vision`. Il log non dimostra che Fortnite abbia ricevuto input.
+
+Per eventuali prove reali, verificare prima le regole di Epic e usare solo un account secondario che si è disposti a perdere: l'automazione può comportare sanzioni. Non sono previste tecniche di elusione dell'anti-cheat.

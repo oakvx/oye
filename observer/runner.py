@@ -45,17 +45,20 @@ from .models import Action, Match
 from .windows import enable_dpi_awareness, foreground_window, snapshot, close_capture
 
 ROOT = Path(__file__).resolve().parents[1]
+# Retain a non-actionable last observation across the normal OCR scheduling gap.
+# MenuSupervisor and the final click guard still reject evidence older than 4 s.
+MENU_OCR_RETENTION_SECONDS = 7.5
 
 def _cached_play_match(now, scene, region_recent, scanner_play_recent, left, top):
     """Return the latest positive PLAY match and its *original* OCR timestamp."""
     if scene not in ('lobby', 'unknown'):
         return None
     cached = region_recent.get('gioca')
-    if cached is not None and 0 <= now - cached[0] < 3.4:
+    if cached is not None and 0 <= now - cached[0] < MENU_OCR_RETENTION_SECONDS:
         at, result = cached
         return at, Match('gioca', result['score'],
                          (result['center'][0] + left, result['center'][1] + top))
-    if scanner_play_recent is not None and 0 <= now - scanner_play_recent[0] < 3.4:
+    if scanner_play_recent is not None and 0 <= now - scanner_play_recent[0] < MENU_OCR_RETENTION_SECONDS:
         return scanner_play_recent
     return None
 
@@ -71,7 +74,7 @@ def _cached_result_menu_matches(now, scene, region_recent, left, top):
     matches = {}
     for name in ('continua', 'torna_lobby', 'gioca_di_nuovo'):
         cached = region_recent.get(name)
-        if cached is None or not 0 <= now - cached[0] < 3.4:
+        if cached is None or not 0 <= now - cached[0] < MENU_OCR_RETENTION_SECONDS:
             continue
         at, result = cached
         matches[name] = (at, Match(name, result['score'],
@@ -199,6 +202,8 @@ class Runner:
         self.phase_ocr: PhaseOCRWorker | None = None
         self.region_ocr: ScreenRegionOCRWorker | None = None
         self._play_region_status: tuple[float,str] | None = None
+        self._button_positive_at: dict[tuple[str, str], float] = {}
+        self._button_logged_at: dict[tuple[str, str], float] = {}
         self._manual_stop = False
         self.checkpoint_path = self.root / 'state' / 'auto_cycle.json'
 
@@ -221,6 +226,24 @@ class Runner:
             if status == 'absent' and 0 <= now - at <= 3.0:
                 return at
         return frame_at
+
+    def _record_button_evidence(self, name: str, source: str, at: float,
+                                score: float | None, status: str, now: float) -> None:
+        """Log actual distinct readings, not each reuse of an OCR cache entry."""
+        key = (name, source)
+        if at <= self._button_logged_at.get(key, float('-inf')):
+            return
+        self._button_logged_at[key] = at
+        previous = self._button_positive_at.get(key)
+        interval = None if previous is None else round(at - previous, 3)
+        if status == 'present':
+            self._button_positive_at[key] = at
+        self._emit('button_evidence', f'{name}: lettura {source} {status}', info={
+            'button': name, 'source': source, 'source_at_monotonic': at,
+            'score': score, 'status': status,
+            'since_previous_positive_seconds': interval,
+            'age_seconds': round(max(0.0, now - at), 3),
+        })
 
     def _emit(self, kind: str, message: str, *, info: dict | None = None) -> None:
         payload = {'at': datetime.now().isoformat(timespec='seconds'), 'event': kind, 'message': message}
@@ -282,6 +305,8 @@ class Runner:
         self.stop_event.clear()
         self.pause_event.clear()
         self._manual_stop = False
+        self._button_positive_at.clear()
+        self._button_logged_at.clear()
         self._last_ocr_text = ''
         self._last_ocr_status = ''
         self._last_ocr_at = 0.0
@@ -856,6 +881,10 @@ class Runner:
                 try:
                     reading = self.vision.recognize(frame, win.left, win.top)
                     menu_evidence_at = {}  # source OCR capture, not receipt or current screenshot
+                    for name in ('gioca', 'gioca_di_nuovo'):
+                        if name in reading.best:
+                            self._record_button_evidence(name, 'template', captured_at,
+                                reading.best[name].score, 'present', time.monotonic())
                     stable_region = {k:r for k,(t,r) in region_recent.items() if now-t<3.4}
                     # Independent per-zone OCR: each user-taught region has its
                     # own phrase and two-fresh-frame confirmation. Positive
@@ -908,6 +937,9 @@ class Runner:
                             scan_data={k:v for k,v in scan_cache.items()
                                        if v.get('at')==regional['at'] and regional.get('status')=='ok'}
                             scanner_gioca=scan_data.get('lobby',{})
+                            if scanner_gioca:
+                                self._record_button_evidence('gioca', 'scanner_modulare', regional['at'],
+                                    scanner_gioca.get('confidence'), scanner_gioca.get('status', 'unknown'), time.monotonic())
                             if scanner_gioca.get('status') in ('present','absent'):
                                 self._play_region_status=(regional['at'],scanner_gioca['status'])
                             # A fresh negative or failed reading invalidates cached coordinates.
@@ -959,6 +991,13 @@ class Runner:
                                     last_region_report=tag
                             elif regional.get('status')=='ok' and 0 <= now - regional['at'] <= 5.0:
                                 data=regional.get('readings',{})
+                                for name in ('gioca', 'gioca_di_nuovo'):
+                                    part = data.get(name)
+                                    if part is not None:
+                                        state = ('present' if part.get('matched') else
+                                                 'absent' if part.get('status') == 'ok' and part.get('text') else 'unknown')
+                                        self._record_button_evidence(name, 'ocr_zona', regional['at'],
+                                            part.get('score'), state, time.monotonic())
                                 self._emit('region_ocr','OCR delle zone insegnate',info={
                                     'regions':{key:{'text':v['text'],'score':v['score'],
                                         'stable':v['stable'],'status':v['status']} for key,v in data.items()}})
