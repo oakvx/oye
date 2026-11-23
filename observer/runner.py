@@ -59,6 +59,25 @@ def _cached_play_match(now, scene, region_recent, scanner_play_recent, left, top
         return scanner_play_recent
     return None
 
+def _cached_result_menu_matches(now, scene, region_recent, left, top):
+    """Keep independently timestamped result-button OCR between worker results.
+
+    Rewards deliberately remain on the existing title-confirmed path.
+    The supervisor still requires three distinct source timestamps and a
+    compatible lifecycle phase before authorizing any click.
+    """
+    if scene != 'results':
+        return {}
+    matches = {}
+    for name in ('continua', 'torna_lobby', 'gioca_di_nuovo'):
+        cached = region_recent.get(name)
+        if cached is None or not 0 <= now - cached[0] < 3.4:
+            continue
+        at, result = cached
+        matches[name] = (at, Match(name, result['score'],
+                         (result['center'][0] + left, result['center'][1] + top)))
+    return matches
+
 def _menu_click_guard(point, captured_window, current_window, frame_at, evidence_at, now):
     """Last-moment check for a click derived from a real captured client area."""
     if current_window is None or current_window != captured_window:
@@ -992,6 +1011,11 @@ class Runner:
                         if cached is not None:
                             at, reading.best['gioca'] = cached
                             menu_evidence_at['gioca'] = at
+                    for name, (at, match) in _cached_result_menu_matches(
+                            now, reading.scene, region_recent, win.left, win.top).items():
+                        if name not in reading.best:
+                            reading.best[name] = match
+                            menu_evidence_at[name] = at
 
                 except Exception as exc:
                     if self.quick_start:
