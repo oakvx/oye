@@ -173,12 +173,20 @@ class Runner:
             return True
         if self._play_region_status is not None:
             at, status = self._play_region_status
-            if now - at <= 3.0:
+            if 0 <= now - at <= 3.0:
                 if status == 'present': return True
                 if status == 'absent': return False
                 return None
         evidence = (reading.menu_checks or {}).get('gioca')
         return True if evidence == 'present' else False if evidence == 'absent' else None
+
+    def _play_evidence_at(self, reading, frame_at: float, now: float) -> float:
+        """Timestamp of the actual absence observation, not the video frame using it."""
+        if ('gioca' not in reading.best and self._play_region_status is not None):
+            at, status = self._play_region_status
+            if status == 'absent' and 0 <= now - at <= 3.0:
+                return at
+        return frame_at
 
     def _emit(self, kind: str, message: str, *, info: dict | None = None) -> None:
         payload = {'at': datetime.now().isoformat(timespec='seconds'), 'event': kind, 'message': message}
@@ -1370,6 +1378,7 @@ class Runner:
                                     reward_pending=reward_overlay_pending,
                                     learned_hint=learned_hint,
                                     play_visible=self._play_visibility(reading, now),
+                                    play_evidence_at=self._play_evidence_at(reading, captured_at, now),
                                     play_point=(reading.best['gioca'].center if 'gioca' in reading.best else None))
                             # Persist real state changes, not every OCR frame.
                             # The database policy is loaded at startup and

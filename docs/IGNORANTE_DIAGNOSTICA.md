@@ -21,3 +21,5 @@ La dashboard avvia Ignorante in ciclo continuo: Gioca → caricamento → salti 
 ## Acquisizioni OCR
 
 Durante l'ingresso, le letture della zona Gioca hanno priorità; nei risultati ha priorità Gioca di nuovo. Le altre zone continuano a essere lette a rotazione: resta un solo OCR per acquisizione, per non sovraccaricare il sistema. Fotogrammi ripetuti o fuori ordine non vengono reinviati come nuove prove. Se cambia la risoluzione rispetto al profilo, le coordinate OCR conservate vengono scartate: selezionare o insegnare un profilo adatto alla risoluzione effettiva.
+
+La scomparsa di Gioca richiede tre osservazioni negative distinte: una lettura OCR negativa conservata temporaneamente non viene contata più volte sui fotogrammi successivi. Finché mancano conferme, la routine resta in attesa.
