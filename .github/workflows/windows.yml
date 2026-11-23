@@ -1,0 +1,46 @@
+name: Windows validation
+
+on:
+  pull_request:
+  push:
+    branches: [main, 'arena/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install test and build dependencies
+        run: python -m pip install -r requirements.txt -r requirements-ui.txt pytest "pyinstaller>=6,<7"
+      - name: Run Python test suite
+        run: python -m pytest -q
+      - name: Smoke test source entry point
+        run: python studio.py --smoke-test
+      - name: Build Windows application
+        run: >-
+          python -m PyInstaller --noconfirm --clean --onedir --contents-directory .
+          --windowed --name OyeStudio --add-data "web;web" --add-data "assets;assets"
+          --add-data "defaults/config.json;." --collect-submodules webview studio.py
+      - name: Verify frozen executable
+        shell: pwsh
+        run: |
+          $exe = Join-Path $PWD 'dist/OyeStudio/OyeStudio.exe'
+          if (-not (Test-Path $exe)) { throw 'OyeStudio.exe missing' }
+          $p = Start-Process -FilePath $exe -ArgumentList '--smoke-test' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Frozen smoke test failed: $($p.ExitCode)" }
+      - name: Upload validated application
+        uses: actions/upload-artifact@v4
+        with:
+          name: OyeStudio-windows-x64
+          path: dist/OyeStudio/
+          if-no-files-found: error
+          retention-days: 7

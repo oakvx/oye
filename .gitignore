@@ -1,0 +1,27 @@
+# Local Python and build output
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+.build-venv/
+build/
+dist/
+release/
+*.spec
+
+# Local recordings, diagnostics, and mutable app state
+learning/
+logs/
+state/
+reports/
+templates/
+_OYE_BACKUP/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+.oye-prepared-*.json
+
+# Machine-specific settings (the tracked legacy config remains tracked)
+config.json
+.env
+.env.*
