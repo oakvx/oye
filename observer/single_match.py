@@ -133,6 +133,7 @@ class SingleMatchController:
                          play_point: tuple[int, int] | None = None,
                          scene: str = 'unknown',
                          click_authorized: bool = True,
+                         play_button_confirmed: bool = False,
                          evidence_at: float | None = None) -> Action:
         """Fortnite lobby: detect PLAY, click it, verify it disappears, then wait.
 
@@ -149,9 +150,9 @@ class SingleMatchController:
                 self.quick_departed = False
                 self.play_disappeared = False
                 self.quick_wait_elapsed = 0.0
-            if self.quick_play_streak < 3:
+            if self.quick_play_streak < 3 and not play_button_confirmed:
                 return self._wait(f'GIOCA visibile: confermo posizione {self.quick_play_streak}/3')
-            if menu != 'gioca' or scene not in ('lobby', 'unknown'):
+            if menu != 'gioca' or (scene != 'lobby' and not (scene == 'unknown' and play_button_confirmed)):
                 return self._wait('GIOCA visibile, ma pulsante/contesto non confermato: attendo')
             target = play_point
             if target is None and candidate.name == 'menu_click':
@@ -194,6 +195,8 @@ class SingleMatchController:
             return self._wait(f'GIOCA scomparso in 3 fotogrammi: attendo {self.quick_loading_seconds:.0f} s')
         self._advance_quick_clock(now)
         if self.quick_wait_elapsed >= self.quick_loading_seconds:
+            if scene in ('lobby', 'loading'):
+                return self._wait('Lobby o caricamento ancora visibili: nessun tasto')
             return self._begin_quick_activity(now)
         return self._wait(f'Caricamento stimato: {max(0.0,self.quick_loading_seconds-self.quick_wait_elapsed):.0f} s, niente input')
 
@@ -244,9 +247,6 @@ class SingleMatchController:
         if self.stage == 'jumping' and self.elapsed - self.last_jump_elapsed >= self.jump_period_seconds:
             self.last_jump_elapsed = self.elapsed
             return Action('jump', .16, reason='IGNORANTE: Space temporizzato senza immagini')
-        if self.elapsed >= 14 and self.elapsed - self.last_secondary_elapsed >= 26:
-            self.last_secondary_elapsed = self.elapsed
-            return Action('secondary_click', .12, reason='IGNORANTE: clic destro breve')
         return self.quick_routine.next_action(harvest=self.harvest)
 
     def _reset_explorer(self):
@@ -465,7 +465,8 @@ class SingleMatchController:
                play_visible: bool | None = None,
                play_point: tuple[int, int] | None = None,
                menu_candidate_authorized: bool = True,
-               play_evidence_at: float | None = None) -> Action:
+               play_evidence_at: float | None = None,
+               play_button_confirmed: bool = False) -> Action:
         # A cached frame does not count twice toward a screen transition.
         if frame_at <= self.last_frame_at:
             return self._wait('Fotogramma già analizzato')
@@ -490,7 +491,7 @@ class SingleMatchController:
                 return self._wait('Ricompensa rilevata: Gioca sospeso')
             if now < self.next_play_at:
                 return self._wait('Lobby confermata: breve pausa prima della prossima partita')
-            if scene == 'lobby' and menu == 'gioca' and candidate.name == 'menu_click':
+            if (scene == 'lobby' or (scene == 'unknown' and play_button_confirmed)) and menu == 'gioca' and candidate.name == 'menu_click':
                 return candidate
             return self._wait('Attesa pulsante GIOCA nella lobby: calibra il pulsante se non compare')
 
@@ -504,6 +505,7 @@ class SingleMatchController:
                 return self._quick_join_gate(now=now, visible=visible, candidate=candidate,
                                              menu=menu, play_point=play_point, scene=scene,
                                              click_authorized=menu_candidate_authorized,
+                                             play_button_confirmed=play_button_confirmed,
                                              evidence_at=frame_at if play_evidence_at is None else play_evidence_at)
             if self.play_clicked_at is not None and now - self.play_clicked_at >= 240:
                 self.last_error = 'Ingresso non confermato entro quattro minuti: controllo schermata e matchmaking'
@@ -630,6 +632,9 @@ class SingleMatchController:
                 self.last_jump_elapsed = self.elapsed
                 return Action('jump', .09, reason='Bus verificato: Space periodico')
             return self._wait('Bus verificato: attesa prossimo salto; W sospeso')
+        if self.quick_wait_play_exit and scene in ('lobby', 'loading'):
+            self.suspend_clock()
+            return self._wait('Lobby o caricamento visibili: movimento sospeso')
         if locked or spectator or scene in (('spectator', 'results') if self.quick_wait_play_exit else
                                              ('spectator', 'results', 'lobby') if self.quick_start else
                                              ('spectator', 'results', 'lobby', 'loading')):
@@ -655,16 +660,13 @@ class SingleMatchController:
             return Action('jump', .16, reason=f'Salto + esplorazione ({self.elapsed:.0f}/{self.jump_window_seconds:.0f} s)')
         # A brief right-click can be part of verified in-match activity; never
         # send it to menus, during reboot, while spectating, or on the bus.
-        if self.elapsed >= 14 and self.elapsed - self.last_secondary_elapsed >= 26:
+        if not self.quick_start and self.elapsed >= 14 and self.elapsed - self.last_secondary_elapsed >= 26:
             self.last_secondary_elapsed = self.elapsed
             return Action('secondary_click', .12, reason='Azione secondaria breve (clic destro)')
         if self.quick_start:
             # Predictable fallback: W/A/D, left mouse and pickaxe happen even
             # without navigation training or image classification.
-            self.explorer.planner.activity = 'Routine rapida a tempo'
-            if self.explorer.recovery_plan:
-                return self.explorer.next_action(now=now)
-            return self.quick_routine.next_action(harvest=self.harvest, learned_hint=learned_hint)
+            return self.quick_routine.next_action(harvest=self.harvest)
         action = self.explorer.next_action(learned_hint=learned_hint, now=now)
         if self.stage == 'jumping' and action.name.startswith('patrol_'):
             # Keep early movement brief: frequent Space presses between segments.

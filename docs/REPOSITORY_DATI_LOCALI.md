@@ -7,3 +7,13 @@ I nuovi file in `learning/`, `logs/`, `state/`, `templates/`, backup e cache son
 Non sono stati rimossi file o dati. Per rimuovere in futuro gli artefatti tracciati, prima chiudere Oye e fare un backup verificato di configurazione, database e relativi WAL/SHM, frame, template e stato; poi pianificare una migrazione esplicita e, se necessario, un intervento sulla cronologia coordinato con il proprietario. La rimozione dall'indice da sola non ripulisce i vecchi commit.
 
 La CI Windows costruisce e verifica l'applicazione e conserva l'artefatto soltanto nelle GitHub Actions del repository; non pubblica release. Non include automaticamente registrazioni, database o log locali nell'artefatto. La disponibilità e durata degli artefatti dipendono dalle impostazioni del repository.
+
+## Pulizia dell'indice
+
+Gli artefatti runtime sopra elencati sono stati rimossi **solo dall'indice Git** con `git rm --cached`; i file locali in questo ambiente non sono stati cancellati. **Attenzione:** quando si applica il commit tramite Git su un altro checkout, Git può cancellare dalla copia di lavoro i file precedentemente tracciati e ora rimossi dall’indice. Prima di fare pull, checkout o aggiornare qualsiasi installazione, chiudi Oye e fai una copia verificata di `config.json`, `learning/` (inclusi database, WAL/SHM e frame), `templates/`, `state/` e `logs/`. Per conservare un database SQLite coerente è importante chiudere Oye prima della copia. L'assenza di questi file in una nuova clonazione non migra automaticamente i dati di un'installazione precedente.
+
+La cronologia non è stata riscritta: vecchi commit possono ancora contenerli. Non pubblicare il repository senza una valutazione e un'eventuale bonifica separata.
+
+### Screenshot personali
+
+`personal-dataset/` è esclusa da Git: può contenere screenshot e manifest locali, mai da inviare alla CI. La cartella può essere sostituita da un percorso esterno scelto dall'utente; se si sceglie un'altra cartella all'interno del repository, aggiungerla prima alle esclusioni Git locali (`.git/info/exclude`). Verificare con `git check-ignore` prima di aggiungere file. Le etichette del manifest locale sono preliminari; non costituiscono calibrazione. Non includere ritagli o immagini nel repository senza approvazione esplicita.

@@ -474,10 +474,7 @@ class OyeStudio(QMainWindow):
         ml.addWidget(label('Per Una partita occorre calibrare GIOCA, HUD, controlli spettatore e ritorno alla lobby. Non basta la scomparsa di GIOCA.','muted',True))
         lay.addWidget(mov)
         adv=card();al=adv.layout();al.addLayout(section_title('Input e compatibilità','Le modifiche entrano in vigore dalla prossima sessione'))
-        b=QHBoxLayout();b.addWidget(label('Dispositivo input','muted'))
-        self.backend_choice=QComboBox();self.backend_choice.addItem('Tastiera e mouse','keyboard');self.backend_choice.addItem('Gamepad (sperimentale)','gamepad')
-        self.backend_choice.setCurrentIndex(0 if self.cfg['input_backend']=='keyboard' else 1)
-        b.addWidget(self.backend_choice);b.addStretch();al.addLayout(b)
+        al.addWidget(label('Dispositivo input: tastiera e mouse','muted'))
         al.addWidget(label('F8 sospende · F9 arresta · input LIVE solo dopo conferma esplicita.','muted',True))
         lay.addWidget(adv)
         diag=card();dl=diag.layout()
@@ -517,7 +514,7 @@ class OyeStudio(QMainWindow):
             c.update(ocr_enabled=self.ocr_check.isChecked(),ollama_enabled=self.ollama_check.isChecked(),
                      capture_seconds=self.capture_spin.value(),guided_timed_enabled=self.timed_check.isChecked(),
                      guided_explore_harvest=self.harvest_check.isChecked(),guided_smooth_enabled=self.smooth_check.isChecked(),
-                     guided_camera_pixels=self.turn_spin.value(),input_backend=self.backend_choice.currentData(),
+                     guided_camera_pixels=self.turn_spin.value(),
                      single_match_jump_seconds=float(self.single_jump_spin.value()),
                      guided_activity_profile=self.profile_choice.currentText())
             # These flags represent the NEXT session, not persisted authorization.
@@ -541,10 +538,6 @@ class OyeStudio(QMainWindow):
                       +extra+'Non aggira anti-cheat o controlli AFK. F8 = pausa, F9 = arresta.\n\nVuoi attivare gli input LIVE?')
             if QMessageBox.question(self,'Conferma input LIVE',question,QMessageBox.Yes|QMessageBox.No,QMessageBox.No)!=QMessageBox.Yes:
                 return
-        if self.mode=='train' and self.cfg['input_backend']=='gamepad' and self.demo_check.isChecked():
-            QMessageBox.information(self,'Registrazione controller',
-                'La registrazione automatica delle dimostrazioni riconosce la tastiera, non i pulsanti del gamepad.\n'
-                'Gli screenshot verranno comunque acquisiti e potrai correggerli nella pagina Partite e dati.')
         if self.mode=='autonomous' and self.cfg['ollama_enabled']:
             try:
                 from observer.ollama_vision import LocalVisionModel

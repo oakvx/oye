@@ -25,3 +25,6 @@ _OYE_BACKUP/
 config.json
 .env
 .env.*
+
+# Screenshot e annotazioni personali (non condividere)
+personal-dataset/

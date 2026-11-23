@@ -10,6 +10,7 @@ from observer.driver import Driver
 from observer.models import Action
 from observer.runner import Runner
 from observer.single_match import SingleMatchController
+from observer.quick_routine import QuickRoutine
 from oye_web_app import Dashboard
 
 
@@ -24,6 +25,7 @@ def tick(ctrl, now, scene='unknown', menu=None, candidate=None, **kw):
 class QuickTimerTests(unittest.TestCase):
     def test_manual_pronto_no_play_no_hud_starts_at_20(self):
         c = SingleMatchController(quick_start=True, repeat=True)
+        c.quick_routine = QuickRoutine(seed=17)
         c.arm_quick(100.)
         self.assertEqual(c.stage, 'joining')
         self.assertEqual(tick(c, 119.99).name, 'wait')
@@ -104,6 +106,7 @@ class DriverTests(unittest.TestCase):
         fake = FakeGUI()
         driver.gui = fake
         c = SingleMatchController(quick_start=True)
+        c.quick_routine = QuickRoutine(seed=17)
         c.arm_quick(10.)
         actions = [tick(c, 30.)]
         actions += [tick(c, 30.2 + i*.18) for i in range(15)]

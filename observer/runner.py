@@ -14,7 +14,6 @@ import cv2
 from .brain import Brain
 from .config import load
 from .driver import Driver
-from .gamepad import GamepadDriver
 from .models import Observation
 from .vision import Vision, motion_between, camera_turn_between, recognize_aerial_text
 from .menu_supervisor import MenuSupervisor
@@ -42,20 +41,24 @@ from .feedback import evaluate
 from .state_estimator import PhaseEstimator
 from .ollama_vision import LocalVisionModel
 from .models import Action, Match
+from .play_evidence import PlayEvidence, PlaySignal
 from .windows import enable_dpi_awareness, foreground_window, snapshot, close_capture
 
 ROOT = Path(__file__).resolve().parents[1]
+# Retain a non-actionable last observation across the normal OCR scheduling gap.
+# MenuSupervisor and the final click guard still reject evidence older than 4 s.
+MENU_OCR_RETENTION_SECONDS = 7.5
 
 def _cached_play_match(now, scene, region_recent, scanner_play_recent, left, top):
     """Return the latest positive PLAY match and its *original* OCR timestamp."""
     if scene not in ('lobby', 'unknown'):
         return None
     cached = region_recent.get('gioca')
-    if cached is not None and 0 <= now - cached[0] < 3.4:
+    if cached is not None and 0 <= now - cached[0] < MENU_OCR_RETENTION_SECONDS:
         at, result = cached
         return at, Match('gioca', result['score'],
                          (result['center'][0] + left, result['center'][1] + top))
-    if scanner_play_recent is not None and 0 <= now - scanner_play_recent[0] < 3.4:
+    if scanner_play_recent is not None and 0 <= now - scanner_play_recent[0] < MENU_OCR_RETENTION_SECONDS:
         return scanner_play_recent
     return None
 
@@ -71,12 +74,23 @@ def _cached_result_menu_matches(now, scene, region_recent, left, top):
     matches = {}
     for name in ('continua', 'torna_lobby', 'gioca_di_nuovo'):
         cached = region_recent.get(name)
-        if cached is None or not 0 <= now - cached[0] < 3.4:
+        if cached is None or not 0 <= now - cached[0] < MENU_OCR_RETENTION_SECONDS:
             continue
         at, result = cached
         matches[name] = (at, Match(name, result['score'],
                          (result['center'][0] + left, result['center'][1] + top)))
     return matches
+
+_MOUSE_BUTTON_ACTIONS = frozenset({
+    'patrol_harvest', 'forward_harvest', 'harvest', 'shoot', 'forward_shoot',
+    'strafe_left_shoot', 'strafe_right_shoot', 'secondary_click', 'aim_hold',
+})
+
+def _ignorante_mouse_gate(action, *, scene, gameplay_authorized):
+    """Never send mouse buttons from the routine without a stable match HUD."""
+    if action.name in _MOUSE_BUTTON_ACTIONS and not (scene == 'match' and gameplay_authorized):
+        return Action('wait', reason='Mouse sospeso: HUD di partita non confermato')
+    return action
 
 def _menu_click_guard(point, captured_window, current_window, frame_at, evidence_at, now):
     """Last-moment check for a click derived from a real captured client area."""
@@ -199,6 +213,8 @@ class Runner:
         self.phase_ocr: PhaseOCRWorker | None = None
         self.region_ocr: ScreenRegionOCRWorker | None = None
         self._play_region_status: tuple[float,str] | None = None
+        self._button_positive_at: dict[tuple[str, str], float] = {}
+        self._button_logged_at: dict[tuple[str, str], float] = {}
         self._manual_stop = False
         self.checkpoint_path = self.root / 'state' / 'auto_cycle.json'
 
@@ -221,6 +237,24 @@ class Runner:
             if status == 'absent' and 0 <= now - at <= 3.0:
                 return at
         return frame_at
+
+    def _record_button_evidence(self, name: str, source: str, at: float,
+                                score: float | None, status: str, now: float) -> None:
+        """Log actual distinct readings, not each reuse of an OCR cache entry."""
+        key = (name, source)
+        if at <= self._button_logged_at.get(key, float('-inf')):
+            return
+        self._button_logged_at[key] = at
+        previous = self._button_positive_at.get(key)
+        interval = None if previous is None else round(at - previous, 3)
+        if status == 'present':
+            self._button_positive_at[key] = at
+        self._emit('button_evidence', f'{name}: lettura {source} {status}', info={
+            'button': name, 'source': source, 'source_at_monotonic': at,
+            'score': score, 'status': status,
+            'since_previous_positive_seconds': interval,
+            'age_seconds': round(max(0.0, now - at), 3),
+        })
 
     def _emit(self, kind: str, message: str, *, info: dict | None = None) -> None:
         payload = {'at': datetime.now().isoformat(timespec='seconds'), 'event': kind, 'message': message}
@@ -282,6 +316,8 @@ class Runner:
         self.stop_event.clear()
         self.pause_event.clear()
         self._manual_stop = False
+        self._button_positive_at.clear()
+        self._button_logged_at.clear()
         self._last_ocr_text = ''
         self._last_ocr_status = ''
         self._last_ocr_at = 0.0
@@ -372,10 +408,12 @@ class Runner:
         scanner_play_recent = None  # (capture time, calibrated Match), never a new OCR observation
         region_frame_windows = {}
         last_ocr_window = None
+        play_evidence = PlayEvidence()
         last_phase_ocr_label = 'normal'
         last_phase_ocr_error = ''
         quick_ocr_fault = False
         quick_ocr_last_ok = float('-inf')
+        phase_focus_epoch = float('-inf')
         reboot_reentry_armed = False
         unknown_watchdog = UnknownWatchdog()
         last_single_recovery_count = 0
@@ -485,9 +523,7 @@ class Runner:
                       solo_mode=bool((self.timed or self.single_match) and self.cfg['guided_solo_mode']))
         driver = None
         try:
-            backend = self.cfg['input_backend']
-            driver_class = GamepadDriver if backend == 'gamepad' else Driver
-            driver = driver_class(live=self.live, allowed=self._allowed, config=self.cfg,
+            driver = Driver(live=self.live, allowed=self._allowed, config=self.cfg,
                             stop=self.stop_event, paused=self.pause_event)
             def quick_without_frame(now: float, detail: str):
                 """Run user-armed IGNORANTE even with zero frames or broken recognition."""
@@ -496,6 +532,8 @@ class Runner:
                         or self.stop_event.is_set() or not self._allowed()):
                     return
                 action = single.quick_without_frame(now)
+                if self.quick_wait_play_exit:
+                    action = _ignorante_mouse_gate(action, scene='unknown', gameplay_authorized=False)
                 if action.name != 'wait':
                     sent = driver.run(action)
                     if sent:
@@ -509,7 +547,7 @@ class Runner:
                         'scene': 'unknown', 'capture': detail, 'hud': 'non necessario',
                         'ocr_phase': 'non disponibile', 'phase': single.label,
                         'phase_detail': 'IGNORANTE: tempo indipendente dagli screenshot',
-                        'objective': 'IGNORANTE: esplorazione semplice, salti, visuale e piccone',
+                        'objective': 'IGNORANTE: salti, WASD casuale e piccone',
                         'action': action.name, 'reason': action.reason,
                         'input_status': last_driver_feedback,
                         'matches_completed': single.matches_completed,
@@ -712,7 +750,7 @@ class Runner:
                     provider=foreground_window, grab=snapshot)
                 self.frame_stream.start()
                 self._emit('performance', 'Acquisizione asincrona attiva: ultimo frame disponibile, senza coda')
-            self._emit('lifecycle', 'Monitor avviato' + (f' (input {backend} abilitati)' if self.live else ' (sola osservazione)'))
+            self._emit('lifecycle', 'Monitor avviato' + (' (input tastiera e mouse abilitati)' if self.live else ' (sola osservazione)'))
             while not self.stop_event.is_set():
                 now = time.monotonic()
                 decision = budget.check(now, actions_count)
@@ -729,6 +767,15 @@ class Runner:
                     self._emit('lifecycle', decision.reason +
                                ': nuovo blocco di monitoraggio; partita invariata')
                 if self.pause_event.is_set():
+                    phase_focus_epoch = time.monotonic()
+                    play_evidence.reset()
+                    region_recent.clear()
+                    scanner_play_recent = None
+                    self._play_region_status = None
+                    region_frame_windows.clear()
+                    last_ocr_window = None
+                    if menu_supervisor is not None:
+                        menu_supervisor.invalidate_observations()
                     self._demo_allowed.clear()
                     if self.planner and agent_was_permitted:
                         self.planner.invalidate()
@@ -743,6 +790,8 @@ class Runner:
                     continue
                 win = foreground_window(self.cfg['window_executables'])
                 if win is None:
+                    phase_focus_epoch = time.monotonic()
+                    play_evidence.reset()
                     # Do not reuse an in-flight OCR result after alt-tab, even
                     # if the same window returns to the same coordinates.
                     if last_ocr_window is not None:
@@ -775,6 +824,8 @@ class Runner:
                     self.stop_event.wait(.4)
                     continue
                 if win != last_ocr_window:
+                    phase_focus_epoch = time.monotonic()
+                    play_evidence.reset()
                     # OCR points and stability belong to the window geometry
                     # on which they were measured, not to a later placement.
                     region_recent.clear()
@@ -855,7 +906,24 @@ class Runner:
                 vision_started = time.perf_counter()
                 try:
                     reading = self.vision.recognize(frame, win.left, win.top)
+                    play_signals = []
+                    play_veto_scene = reading.scene if reading.scene in PlayEvidence.VETO_SCENES else 'unknown'
+                    if reading.phase_hint in ('battle_bus', 'skydiving'):
+                        play_veto_scene = 'match'
+                    template_play = reading.best.get('gioca')
+                    template_status = (reading.menu_checks or {}).get('gioca', 'unknown')
+                    if template_play is not None:
+                        point = template_play.center
+                        play_signals.append(PlaySignal('vision_gioca', 'template', captured_at, win,
+                            'present', template_play.score, (point[0], point[1], point[0]+1, point[1]+1), point))
+                    elif template_status in ('absent', 'unknown') and 'gioca' in (reading.menu_checks or {}):
+                        play_signals.append(PlaySignal('vision_gioca', 'template', captured_at, win,
+                            template_status, 0., (0, 0, 0, 0)))
                     menu_evidence_at = {}  # source OCR capture, not receipt or current screenshot
+                    for name in ('gioca', 'gioca_di_nuovo'):
+                        if name in reading.best:
+                            self._record_button_evidence(name, 'template', captured_at,
+                                reading.best[name].score, 'present', time.monotonic())
                     stable_region = {k:r for k,(t,r) in region_recent.items() if now-t<3.4}
                     # Independent per-zone OCR: each user-taught region has its
                     # own phrase and two-fresh-frame confirmation. Positive
@@ -907,7 +975,20 @@ class Runner:
                             # the debugger, not in the action/coordinate path.
                             scan_data={k:v for k,v in scan_cache.items()
                                        if v.get('at')==regional['at'] and regional.get('status')=='ok'}
+                            # Any fresh incompatible scanner is a veto even if
+                            # fusion currently retains a previous LOBBY state.
+                            for incompatible in ('matchmaking','loading','battle_bus','skydiving','gliding',
+                                                 'elimination','spectating','reboot_wait','return_to_lobby',
+                                                 'reward_title','riscatta','player_counter','elimination_counter'):
+                                if scan_data.get(incompatible, {}).get('status') == 'present':
+                                    play_veto_scene = 'results'
+                            if confirmed and fusion.get('state') in ('MATCHMAKING','LOADING','IN_MATCH','LANDED',
+                                    'ELIMINATED','SPECTATING','RETURNING_TO_LOBBY','BATTLE_BUS','SKYDIVING','GLIDING'):
+                                play_veto_scene = 'results'
                             scanner_gioca=scan_data.get('lobby',{})
+                            if scanner_gioca:
+                                self._record_button_evidence('gioca', 'scanner_modulare', regional['at'],
+                                    scanner_gioca.get('confidence'), scanner_gioca.get('status', 'unknown'), time.monotonic())
                             if scanner_gioca.get('status') in ('present','absent'):
                                 self._play_region_status=(regional['at'],scanner_gioca['status'])
                             # A fresh negative or failed reading invalidates cached coordinates.
@@ -959,6 +1040,13 @@ class Runner:
                                     last_region_report=tag
                             elif regional.get('status')=='ok' and 0 <= now - regional['at'] <= 5.0:
                                 data=regional.get('readings',{})
+                                for name in ('gioca', 'gioca_di_nuovo'):
+                                    part = data.get(name)
+                                    if part is not None:
+                                        state = ('present' if part.get('matched') else
+                                                 'absent' if part.get('status') == 'ok' and part.get('text') else 'unknown')
+                                        self._record_button_evidence(name, 'ocr_zona', regional['at'],
+                                            part.get('score'), state, time.monotonic())
                                 self._emit('region_ocr','OCR delle zone insegnate',info={
                                     'regions':{key:{'text':v['text'],'score':v['score'],
                                         'stable':v['stable'],'status':v['status']} for key,v in data.items()}})
@@ -968,6 +1056,18 @@ class Runner:
                                 # ABSENT or UNKNOWN; OCR failures/blank frames stay UNKNOWN.
                                 play_part = data.get('gioca')
                                 if play_part is not None:
+                                    roi = play_part.get('region')
+                                    if (isinstance(roi, (tuple, list)) and len(roi) == 4 and
+                                            all(isinstance(v, (int, float)) and 0 <= v <= 1 for v in roi) and
+                                            roi[0] < roi[2] and roi[1] < roi[3]):
+                                        bounds = (win.left + round(roi[0]*frame.shape[1]),
+                                                  win.top + round(roi[1]*frame.shape[0]),
+                                                  win.left + round(roi[2]*frame.shape[1]),
+                                                  win.top + round(roi[3]*frame.shape[0]))
+                                        status = ('present' if play_part.get('status') == 'ok' and play_part.get('matched') else
+                                                  'absent' if play_part.get('status') == 'ok' and play_part.get('text') else 'unknown')
+                                        play_signals.append(PlaySignal('ocr_zona_gioca', 'ocr', regional['at'], win,
+                                            status, float(play_part.get('score') or 0.), bounds))
                                     ps = ('present' if play_part.get('stable') else
                                           'absent' if play_part.get('status')=='ok' and
                                           not play_part.get('matched') and play_part.get('text') else
@@ -1063,7 +1163,7 @@ class Runner:
                             text=phase_ocr_result.text[:120], label=label,
                             count_scan=i==0)
                     quick_ocr_fault = False
-                    quick_ocr_last_ok = now
+                    quick_ocr_last_ok = phase_ocr_result.at
                 if overlay.state != last_phase_ocr_label:
                     self._emit('phase_ocr', overlay.detail,
                                info={'ocr_phase': overlay.state,
@@ -1360,7 +1460,8 @@ class Runner:
                             learned_hint = None
                             menu_offer = None
                             menu_target = None
-                            if (not resume_gate.active and single.stage in ('jumping', 'exploring')
+                            play_confirmation = None
+                            if (not self.quick_start and not resume_gate.active and single.stage in ('jumping', 'exploring')
                                     and self.fast_policy is not None
                                     and self.fast_policy.examples >= 3
                                     and (authorized or (self.quick_start and reading.scene == 'unknown'))
@@ -1388,6 +1489,27 @@ class Runner:
                             # send and retry supervisor. Never let legacy Brain
                             # pre-count a click that SingleMatch vetoes.
                             if menu_supervisor is not None and not resume_gate.active:
+                                now = time.monotonic()
+                                if overlay.hold or brain.spectator_latched or reward_overlay_confirmed or reward_overlay_pending:
+                                    play_veto_scene = 'results'
+                                phase_ocr_ready = (not quick_ocr_fault and quick_ocr_last_ok >= phase_focus_epoch
+                                                   and 0 <= now - quick_ocr_last_ok <= 12.)
+                                if self.quick_wait_play_exit and not phase_ocr_ready:
+                                    play_evidence.reset()
+                                    play_confirmation = None
+                                else:
+                                    play_confirmation = play_evidence.update(now=now, window=win, focused=True,
+                                        signals=play_signals, scene=play_veto_scene)
+                                if play_confirmation is not None:
+                                    self._emit('play_confirmation', 'GIOCA: tre coppie template/OCR concordi',
+                                        info={'signals': [{'source': x.source, 'method': x.method,
+                                                'score': x.score, 'capture_at': x.at,
+                                                'age_seconds': round(now-x.at, 3)}
+                                                for x in play_confirmation.signals],
+                                              'point': list(play_confirmation.point)})
+                                    reading.best['gioca'] = Match('gioca', play_confirmation.signals[0].score,
+                                                                  play_confirmation.point)
+                                    menu_evidence_at['gioca'] = play_confirmation.at
                                 menu_offer = menu_supervisor.offer(
                                     now=now, frame_at=captured_at, stage=single.stage,
                                     scene=reading.scene, matches=reading.best,
@@ -1395,7 +1517,8 @@ class Runner:
                                     reward_scan_confirmed=reward_scan_confirmed,
                                     locked=overlay.hold, spectator=brain.spectator_latched,
                                     evidence_times=menu_evidence_at,
-                                    prefer_requeue=self.quick_wait_play_exit)
+                                    prefer_requeue=self.quick_wait_play_exit,
+                                    require_play_confirmation=True, play_confirmation=play_confirmation)
                                 if menu_supervisor.last_completed == 'gioca_di_nuovo':
                                     single.on_requeue_confirmed(now)
                                     self._emit('menu_verified', 'GIOCA DI NUOVO: nuova ricerca confermata, timer partita riarmato')
@@ -1446,6 +1569,7 @@ class Runner:
                                     learned_hint=learned_hint,
                                     play_visible=self._play_visibility(reading, now),
                                     play_evidence_at=self._play_evidence_at(reading, captured_at, now),
+                                    play_button_confirmed=bool(menu_target == 'gioca' and play_confirmation is not None),
                                     play_point=(reading.best['gioca'].center if 'gioca' in reading.best else None))
                             # Persist real state changes, not every OCR frame.
                             # The database policy is loaded at startup and
@@ -1826,6 +1950,9 @@ class Runner:
                         menu_offer.action.point != decision.point):
                     self._emit('menu_blocked','Clic menu rifiutato: nessuna transazione verificata')
                     decision=Action('wait',reason='Menu: attendo riconoscimento e conferme')
+                if self.quick_wait_play_exit and single is not None and single.stage in ('jumping', 'exploring'):
+                    decision = _ignorante_mouse_gate(decision, scene=reading.scene,
+                                                     gameplay_authorized=authorized)
                 if self.live and decision.name == 'menu_click':
                     checked_at = time.monotonic()
                     reason = _menu_click_guard(decision.point, win,

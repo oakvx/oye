@@ -41,12 +41,12 @@ class NovicePolicyTests(unittest.TestCase):
         counts = Counter(names)
         self.assertEqual(counts['equip_pickaxe'], 1)
         self.assertIn('reverse', counts)
-        self.assertIn('crouch', counts)
-        self.assertIn('secondary_click', counts)
+        self.assertNotIn('crouch', counts)
+        self.assertNotIn('secondary_click', counts)
         self.assertIn('patrol_harvest', counts)
-        self.assertTrue(any(n in counts for n in ('turn_left', 'turn_right')))
         self.assertTrue(any(n in counts for n in ('patrol_hop', 'jump')))
-        self.assertTrue(any(n in counts for n in ('patrol_weave_left', 'patrol_weave_right')))
+        self.assertIn('strafe_left', counts)
+        self.assertIn('strafe_right', counts)
         self.assertTrue(all(a.name != 'wait' and .10 <= a.seconds <= 1.4 for a in actions))
         # Demand repeated activity across the *whole* run, not only in warmup.
         for chunk_start in range(10, len(names) - 16, 8):
@@ -68,6 +68,12 @@ class NovicePolicyTests(unittest.TestCase):
         self.assertNotEqual(names[30:45], names[45:60])
         self.assertEqual(a, ['equip_pickaxe'])
 
+    def test_ignorante_does_not_use_learned_suggestions(self):
+        plain, hinted = QuickRoutine(seed=9), QuickRoutine(seed=9)
+        for _ in range(50):
+            self.assertEqual(plain.next_action(harvest=True),
+                             hinted.next_action(harvest=True, learned_hint=Action('shoot', .4)))
+
     def test_disabled_harvest_does_not_send_left_click_actions(self):
         q = QuickRoutine(seed=42)
         names = [q.next_action(harvest=False).name for _ in range(90)]
@@ -87,7 +93,7 @@ class NovicePolicyTests(unittest.TestCase):
 
     def test_no_frame_controller_still_moves_and_harvests_after_120_seconds(self):
         c = SingleMatchController(quick_start=True, repeat=True, jump_window_seconds=120)
-        # Keep assertions reproducible: production intentionally uses random motifs.
+        # Keep assertions reproducible: production intentionally chooses random directions.
         c.quick_routine = QuickRoutine(seed=0)
         c.arm_quick(100)
         self.assertEqual(c.quick_without_frame(120).name, 'jump')
@@ -99,7 +105,7 @@ class NovicePolicyTests(unittest.TestCase):
         self.assertEqual(c.stage, 'exploring')
         self.assertIn('patrol_harvest', seen[-45:])
         self.assertIn('patrol_hop', seen[-45:])
-        self.assertIn('patrol_look_left', seen[-45:])
+        self.assertIn('strafe_left', seen[-45:])
         self.assertIn('patrol_forward', seen[-45:])
         self.assertTrue(all(x != 'wait' for x in seen))
 
@@ -141,8 +147,8 @@ class MouseButtonRegressionTests(unittest.TestCase):
         self.assertIn(('keyDown', 'd'), gui.events)
         self.assertIn(('keyDown', 'space'), gui.events)
         self.assertIn(('mouseDown', 'left'), gui.events)
-        self.assertIn(('mouseDown', 'right'), gui.events)
-        self.assertTrue(any(x[0] == 'moveRel' for x in gui.events))
+        self.assertIn(('keyDown', 's'), gui.events)
+        self.assertNotIn(('mouseDown', 'right'), gui.events)
 
 
 if __name__ == '__main__':
