@@ -14,7 +14,6 @@ import cv2
 from .brain import Brain
 from .config import load
 from .driver import Driver
-from .gamepad import GamepadDriver
 from .models import Observation
 from .vision import Vision, motion_between, camera_turn_between, recognize_aerial_text
 from .menu_supervisor import MenuSupervisor
@@ -534,9 +533,7 @@ class Runner:
                       solo_mode=bool((self.timed or self.single_match) and self.cfg['guided_solo_mode']))
         driver = None
         try:
-            backend = self.cfg['input_backend']
-            driver_class = GamepadDriver if backend == 'gamepad' else Driver
-            driver = driver_class(live=self.live, allowed=self._allowed, config=self.cfg,
+            driver = Driver(live=self.live, allowed=self._allowed, config=self.cfg,
                             stop=self.stop_event, paused=self.pause_event)
             def quick_without_frame(now: float, detail: str):
                 """Run user-armed IGNORANTE even with zero frames or broken recognition."""
@@ -763,7 +760,7 @@ class Runner:
                     provider=foreground_window, grab=snapshot)
                 self.frame_stream.start()
                 self._emit('performance', 'Acquisizione asincrona attiva: ultimo frame disponibile, senza coda')
-            self._emit('lifecycle', 'Monitor avviato' + (f' (input {backend} abilitati)' if self.live else ' (sola osservazione)'))
+            self._emit('lifecycle', 'Monitor avviato' + (' (input tastiera e mouse abilitati)' if self.live else ' (sola osservazione)'))
             while not self.stop_event.is_set():
                 now = time.monotonic()
                 decision = budget.check(now, actions_count)

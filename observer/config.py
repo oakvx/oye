@@ -141,8 +141,8 @@ def validate(cfg: dict) -> dict:
         raise ValueError('La modalità FAST-ONLY richiede il dataset di apprendimento attivo')
     if result['guided_activity_profile'] not in PROFILES or not isinstance(result['guided_activity_profile'], str):
         raise ValueError('Profilo di esplorazione non valido')
-    if result['input_backend'] not in ('keyboard', 'gamepad'):
-        raise ValueError('input_backend deve essere keyboard oppure gamepad')
+    if result['input_backend'] != 'keyboard':
+        raise ValueError('input_backend non supportato: è consentito solo keyboard; modifica config.json dopo un backup')
     for flag in ('learning_enabled', 'async_capture_enabled', 'ocr_enabled', 'ollama_enabled',
                  'autonomous_enabled', 'autonomous_stop_after_match', 'fast_policy_enabled',
                  'demonstration_enabled', 'demonstration_mouse_shoot',

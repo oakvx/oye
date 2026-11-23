@@ -91,7 +91,6 @@ class Studio:
         self.live_var = tk.BooleanVar(value=False)
         self.auto_var = tk.BooleanVar(value=False)
         self.shoot_var = tk.BooleanVar(value=False)
-        self.backend_var = tk.StringVar(value=self.cfg['input_backend'])
         self.status_var = tk.StringVar(value='Pronto. Puoi osservare anche senza calibrazione.')
         self.capture_seconds_var = tk.DoubleVar(value=self.cfg['capture_seconds'])
         self.ocr_enabled_var = tk.BooleanVar(value=self.cfg['ocr_enabled'])
@@ -240,9 +239,7 @@ class Studio:
         ttk.Checkbutton(row, text='Click automatici nei menu', variable=self.auto_var).pack(side='left', padx=(0, 18))
         ttk.Checkbutton(row, text='Consenti sparo (anche al pilota AI)', variable=self.shoot_var).pack(side='left', padx=(0,12))
         ttk.Checkbutton(row, text='PILOTA AI · Ollama', variable=self.autonomous_var).pack(side='left', padx=(0,12))
-        ttk.Label(row, text='Input:').pack(side='left')
-        ttk.Combobox(row, textvariable=self.backend_var, state='readonly', width=11,
-                     values=('keyboard', 'gamepad')).pack(side='left', padx=5)
+        ttk.Label(row, text='Input: tastiera e mouse').pack(side='left')
         controls = ttk.Frame(main)
         controls.pack(fill='x', pady=(0, 9))
         self.start_btn = ttk.Button(controls, text='Avvia osservazione', command=self._start)
@@ -524,7 +521,6 @@ class Studio:
                 return
         try:
             from observer.config import save
-            self.cfg['input_backend'] = self.backend_var.get()
             self.cfg['capture_seconds'] = float(self.capture_seconds_var.get())
             self.cfg['ocr_enabled'] = bool(self.ocr_enabled_var.get())
             self.cfg['ollama_enabled'] = bool(self.ollama_enabled_var.get())
@@ -1528,11 +1524,6 @@ class Studio:
         self._start()
 
     def _start_exploration(self):
-        if self.demo_capture_var.get() and self.backend_var.get() == 'gamepad':
-            messagebox.showwarning('Registrazione comandi',
-                'La dimostrazione automatica della Fase 1 rileva solo i tasti della tastiera e '
-                'il clic sinistro autorizzato, NON i pulsanti del gamepad. '
-                'Se stai giocando con un controller, salva gli screenshot e insegna le azioni nella timeline.')
         if self.demo_capture_var.get():
             self.demo_status_var.set('Pronto: tasti e clic consentiti verranno registrati anche se l’HUD è incerto. '
                 'I comandi su scene incerte andranno confermati dopo la partita.')
