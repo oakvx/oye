@@ -194,6 +194,8 @@ class SingleMatchController:
             return self._wait(f'GIOCA scomparso in 3 fotogrammi: attendo {self.quick_loading_seconds:.0f} s')
         self._advance_quick_clock(now)
         if self.quick_wait_elapsed >= self.quick_loading_seconds:
+            if scene in ('lobby', 'loading'):
+                return self._wait('Lobby o caricamento ancora visibili: nessun tasto')
             return self._begin_quick_activity(now)
         return self._wait(f'Caricamento stimato: {max(0.0,self.quick_loading_seconds-self.quick_wait_elapsed):.0f} s, niente input')
 
@@ -630,6 +632,9 @@ class SingleMatchController:
                 self.last_jump_elapsed = self.elapsed
                 return Action('jump', .09, reason='Bus verificato: Space periodico')
             return self._wait('Bus verificato: attesa prossimo salto; W sospeso')
+        if self.quick_wait_play_exit and scene in ('lobby', 'loading'):
+            self.suspend_clock()
+            return self._wait('Lobby o caricamento visibili: movimento sospeso')
         if locked or spectator or scene in (('spectator', 'results') if self.quick_wait_play_exit else
                                              ('spectator', 'results', 'lobby') if self.quick_start else
                                              ('spectator', 'results', 'lobby', 'loading')):

@@ -20,6 +20,21 @@ class IgnoranteMenuSafetyTests(unittest.TestCase):
                 play_visible=True, play_point=(20, 30))
             self.assertEqual(action.name, 'wait')
 
+    def test_no_keys_while_lobby_or_loading_is_known(self):
+        for stage in ('joining', 'jumping', 'exploring'):
+            for scene in ('lobby', 'loading'):
+                c = SingleMatchController(quick_start=True, quick_wait_play_exit=True)
+                c.arm_quick(0)
+                c.stage = stage
+                c.quick_play_seen = True
+                c.quick_departed = True
+                c.quick_wait_elapsed = c.quick_loading_seconds
+                c.has_entered = stage != 'joining'
+                action = c.decide(now=200, frame_at=200, scene=scene, menu=None,
+                    candidate=Action('wait'), authorized=False, locked=False,
+                    spectator=False, play_visible=False)
+                self.assertEqual(action.name, 'wait', (stage, scene))
+
     def test_mouse_needs_match_and_authorization(self):
         for name in ('patrol_harvest', 'forward_harvest', 'harvest', 'shoot',
                      'forward_shoot', 'strafe_left_shoot', 'strafe_right_shoot',
