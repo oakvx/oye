@@ -6,6 +6,7 @@ import unittest
 from observer.models import Action, Match
 from observer.menu_supervisor import MenuSupervisor
 from observer.single_match import SingleMatchController
+from observer.play_evidence import PlayEvidence, PlaySignal
 
 
 class ThreeCycleTests(unittest.TestCase):
@@ -15,17 +16,28 @@ class ThreeCycleTests(unittest.TestCase):
         c.arm_quick(0)
         supervisor = MenuSupervisor()
         dispatches = []
+        evidence = PlayEvidence()
 
         def frame(t, scene, button=None, play=None):
             matches = {button: Match(button, .96, (400, 700))} if button else {}
+            signals = ()
+            if button == 'gioca':
+                signals = (PlaySignal('template', 'template', t, 'window', 'present', .96,
+                                      (400, 700, 401, 701), (400, 700)),
+                           PlaySignal('ocr', 'ocr', t, 'window', 'present', .96, (380, 680, 420, 720)))
+            confirmation = evidence.update(now=t, window='window', focused=True,
+                                           signals=signals, scene=scene)
             proposal = supervisor.offer(now=t, frame_at=t, stage=c.stage, scene=scene,
-                matches=matches, repeat=True, prefer_requeue=True)
+                matches=matches, repeat=True, prefer_requeue=True, require_play_confirmation=True,
+                play_confirmation=confirmation,
+                evidence_times={'gioca': confirmation.at} if confirmation else {})
             if supervisor.last_completed == 'gioca_di_nuovo':
                 c.on_requeue_confirmed(t)
             target = proposal.name if proposal.action.name == 'menu_click' else None
             action = c.decide(now=t, frame_at=t, scene=scene, menu=target or button,
                 candidate=proposal.action if target else Action('wait'),
                 menu_candidate_authorized=target is not None,
+                play_button_confirmed=target == 'gioca' and confirmation is not None,
                 authorized=False, locked=False, spectator=False,
                 play_visible=play, play_point=matches['gioca'].center if button == 'gioca' else None)
             if action.name == 'menu_click':

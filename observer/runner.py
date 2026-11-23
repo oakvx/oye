@@ -547,7 +547,7 @@ class Runner:
                         'scene': 'unknown', 'capture': detail, 'hud': 'non necessario',
                         'ocr_phase': 'non disponibile', 'phase': single.label,
                         'phase_detail': 'IGNORANTE: tempo indipendente dagli screenshot',
-                        'objective': 'IGNORANTE: esplorazione semplice, salti, visuale e piccone',
+                        'objective': 'IGNORANTE: salti, WASD casuale e piccone',
                         'action': action.name, 'reason': action.reason,
                         'input_status': last_driver_feedback,
                         'matches_completed': single.matches_completed,
@@ -1461,7 +1461,7 @@ class Runner:
                             menu_offer = None
                             menu_target = None
                             play_confirmation = None
-                            if (not resume_gate.active and single.stage in ('jumping', 'exploring')
+                            if (not self.quick_start and not resume_gate.active and single.stage in ('jumping', 'exploring')
                                     and self.fast_policy is not None
                                     and self.fast_policy.examples >= 3
                                     and (authorized or (self.quick_start and reading.scene == 'unknown'))

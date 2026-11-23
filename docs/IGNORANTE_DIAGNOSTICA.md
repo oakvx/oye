@@ -40,7 +40,7 @@ Per eventuali prove reali, verificare prima le regole di Epic e usare solo un ac
 
 ## Protezione menu e mouse
 
-La lobby deve essere riconosciuta come tale prima di proporre il clic Gioca; una scena `unknown` non autorizza clic sui menu. Nella routine Ignorante i tasti del mouse (piccone, fuoco o clic destro) sono sospesi se l'HUD di partita non è stabile e autorizzato, anche quando manca la cattura. È una protezione aggiuntiva: i vecchi timer possono ancora inviare alcuni tasti di tastiera con scena incerta e non dimostrano l'atterraggio. Non è ancora implementata la nuova macchina a fasi richiesta.
+Gioca richiede tre coppie concordi template/OCR; la scena `unknown` da sola non autorizza né vieta il clic, mentre una scena incompatibile lo vieta. Nella routine Ignorante i tasti del mouse (piccone, fuoco o clic destro) sono sospesi se l'HUD di partita non è stabile e autorizzato, anche quando manca la cattura. È una protezione aggiuntiva: i vecchi timer possono ancora inviare alcuni tasti di tastiera con scena incerta e non dimostrano l'atterraggio. Non è ancora implementata la nuova macchina a fasi richiesta.
 
 Quando la scena è riconosciuta come lobby o caricamento, la routine Ignorante sospende anche i tasti di movimento; non tratta lo scadere dell'attesa come autorizzazione a saltare mentre il caricamento è ancora visibile. Questa protezione non sostituisce il riconoscimento visivo di bus e atterraggio, che resta da implementare.
 
@@ -61,3 +61,7 @@ Nel checkout di questa sessione Vision non ha template locali e restituisce UNKN
 ### Database di calibrazione preliminare condiviso
 
 Su richiesta è disponibile `assets/calibration/profilo_preliminare_1920x1080.sqlite3`: contiene solo un profilo 1920×1080 e cinque regole ROI/testo (PRONTO, ritorno lobby, gioca di nuovo, caricamento e discesa). Non contiene immagini, ritagli o storico partite. È un **esempio isolato**, non viene caricato automaticamente e non va copiato sopra `learning/observer.sqlite3`, che contiene dati personali. Mancano i template personali e la verifica OCR indipendente: il database da solo non rende operativo il ciclo. I riferimenti immagine personali restano fuori da Git. Per un'anteprima usa `python tools/import_calibration.py --root PERCORSO_OYE`; aggiungi `--apply` per inserire solo le regole mancanti nel profilo selezionato 1920×1080 borderless. Le regole esistenti non vengono sovrascritte. Esegui un backup del database prima dell'importazione e riavvia Oye; non vengono importati template personali. Il comando non importa template personali né garantisce clic; la conferma richiede anche un template locale valido e OCR funzionante.
+
+## Routine Ignorante semplificata
+
+Dopo avvio e attesa caricamento, la routine invia Space per la finestra configurata e poi sceglie direzioni WASD casuali, con salti e piccone periodici. Non usa suggerimenti appresi, tattiche, accovacciamento o clic destro. A fine partita preferisce Gioca di nuovo se riconosciuto. I controlli di focus, pausa/stop e menu rimangono: il piccone resta bloccato senza HUD autorizzato. I timer non provano l'atterraggio né la ricezione dei comandi nel gioco.

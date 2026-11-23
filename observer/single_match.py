@@ -247,9 +247,6 @@ class SingleMatchController:
         if self.stage == 'jumping' and self.elapsed - self.last_jump_elapsed >= self.jump_period_seconds:
             self.last_jump_elapsed = self.elapsed
             return Action('jump', .16, reason='IGNORANTE: Space temporizzato senza immagini')
-        if self.elapsed >= 14 and self.elapsed - self.last_secondary_elapsed >= 26:
-            self.last_secondary_elapsed = self.elapsed
-            return Action('secondary_click', .12, reason='IGNORANTE: clic destro breve')
         return self.quick_routine.next_action(harvest=self.harvest)
 
     def _reset_explorer(self):
@@ -663,16 +660,13 @@ class SingleMatchController:
             return Action('jump', .16, reason=f'Salto + esplorazione ({self.elapsed:.0f}/{self.jump_window_seconds:.0f} s)')
         # A brief right-click can be part of verified in-match activity; never
         # send it to menus, during reboot, while spectating, or on the bus.
-        if self.elapsed >= 14 and self.elapsed - self.last_secondary_elapsed >= 26:
+        if not self.quick_start and self.elapsed >= 14 and self.elapsed - self.last_secondary_elapsed >= 26:
             self.last_secondary_elapsed = self.elapsed
             return Action('secondary_click', .12, reason='Azione secondaria breve (clic destro)')
         if self.quick_start:
             # Predictable fallback: W/A/D, left mouse and pickaxe happen even
             # without navigation training or image classification.
-            self.explorer.planner.activity = 'Routine rapida a tempo'
-            if self.explorer.recovery_plan:
-                return self.explorer.next_action(now=now)
-            return self.quick_routine.next_action(harvest=self.harvest, learned_hint=learned_hint)
+            return self.quick_routine.next_action(harvest=self.harvest)
         action = self.explorer.next_action(learned_hint=learned_hint, now=now)
         if self.stage == 'jumping' and action.name.startswith('patrol_'):
             # Keep early movement brief: frequent Space presses between segments.
