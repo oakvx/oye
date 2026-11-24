@@ -1,5 +1,3 @@
-Leggi [CAMBIAMENTI_V44_2.md](CAMBIAMENTI_V44_2.md) per il controllo uniforme di Gioca, Torna alla lobby, Continua, Riscatta e Gioca di nuovo.
-
 # Oye v44.1 — Correzione clic GIOCA in lobby
 
 **Bug corretto:** Oye poteva riconoscere GIOCA e mostrare «Vedo GIOCA», ma restare fermo perché il componente Brain aveva proposto `wait` invece di `menu_click`. In Ignorante ora il controller, dopo tre nuove letture valide, può usare la posizione del pulsante rilevata sullo schermo per inviare il clic. Dopo il clic verifica il cambio della schermata; se GIOCA rimane visibile, tenta al massimo tre clic complessivi, separati da 12 secondi, poi segnala il problema. Non clicca coordinate inventate e non tenta il clic quando manca il focus di Fortnite, quando il target non è confermato o quando la posizione non è disponibile.
@@ -18,7 +16,7 @@ Leggi [CAMBIAMENTI_V44_2.md](CAMBIAMENTI_V44_2.md) per il controllo uniforme di 
 
 L'aggiornamento ZIP non contiene i tuoi dati (`learning/`, `templates/`, `config.json`): chiudi Oye, fai una copia di sicurezza e **estrai i file sopra la cartella esistente**. Apri `AVVIA_OYE.bat` come prima. Le vecchie dimostrazioni rimangono valide e le nuove colonne SQLite sono aggiunte senza cancellazioni.
 
-Leggi [CAMBIAMENTI_V44.md](CAMBIAMENTI_V44.md) per il dettaglio di file, migrazioni, API e limiti. Il training non garantisce una partita autonoma funzionante: la ricezione degli input da parte di Fortnite va ancora verificata su Windows.
+Il training non garantisce una partita autonoma funzionante: la ricezione degli input da parte di Fortnite va ancora verificata su Windows.
 
 ---
 
@@ -50,6 +48,5 @@ Gli scanner preparati **non pretendono che bussola, minimappa o salute siano ide
 - `observer/v42_profile.py`: risoluzione, coordinate ROI normalizzate e soglie.
 - `verify_real_shots.py`: replay della raccolta originale **senza input**, con checksum.
 - `reports/oye42_screenshot_validation.json`: esiti offline per ciascuna fase.
-- `docs/OYE_V42_SCREENSHOT_PROFILE.md`: dettagli, ROI e limitazioni.
 
 Il pacchetto **non include i 136 screenshot originali, il tuo database o la configurazione personale**. L'archivio è un aggiornamento sorgente con avvio assistito, non un `.exe` compilato e collaudato su Windows.

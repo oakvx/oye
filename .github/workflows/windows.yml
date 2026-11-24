@@ -1,9 +1,8 @@
-name: Windows validation
+name: Build Windows EXE
 
 on:
   pull_request:
   push:
-    branches: [main, 'arena/**']
   workflow_dispatch:
 
 permissions:
@@ -11,13 +10,14 @@ permissions:
 
 jobs:
   windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          architecture: x64
           cache: pip
       - name: Install test and build dependencies
         run: python -m pip install -r requirements.txt -r requirements-ui.txt pytest "pyinstaller>=6,<7"
@@ -35,7 +35,7 @@ jobs:
         run: |
           $exe = Join-Path $PWD 'dist/OyeStudio/OyeStudio.exe'
           if (-not (Test-Path $exe)) { throw 'OyeStudio.exe missing' }
-          $p = Start-Process -FilePath $exe -ArgumentList '--smoke-test' -Wait -PassThru
+          $p = Start-Process -FilePath $exe -ArgumentList '--smoke-test' -Wait -PassThru -WindowStyle Hidden
           if ($p.ExitCode -ne 0) { throw "Frozen smoke test failed: $($p.ExitCode)" }
       - name: Upload validated application
         uses: actions/upload-artifact@v4
@@ -44,3 +44,20 @@ jobs:
           path: dist/OyeStudio/
           if-no-files-found: error
           retention-days: 7
+      - name: Build Windows installer
+        shell: pwsh
+        run: |
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
+          if (-not (Test-Path $iscc)) { throw 'Inno Setup compiler missing' }
+          & $iscc 'installer/Oye.iss'
+          if ($LASTEXITCODE -ne 0) { throw "Installer build failed: $LASTEXITCODE" }
+          if (-not (Test-Path 'release/Oye-v44-Setup-Windows-x64.exe')) {
+            throw 'Windows installer missing'
+          }
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Oye-Setup-windows-x64
+          path: release/Oye-v44-Setup-Windows-x64.exe
+          if-no-files-found: error
+          retention-days: 14

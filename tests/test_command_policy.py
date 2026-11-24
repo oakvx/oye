@@ -26,7 +26,8 @@ class CommandPolicyTests(unittest.TestCase):
         policy = CommandPolicy(seed=4)
         actions = [policy.choose(scene='match', authorized=True, now=i, harvest=False) for i in range(60)]
         names = {a.name for a in actions}
-        self.assertTrue({'patrol_forward', 'strafe_left', 'strafe_right', 'reverse', 'patrol_hop'} <= names)
+        self.assertTrue({'patrol_forward', 'strafe_left', 'strafe_right', 'patrol_hop'} <= names)
+        self.assertNotIn('reverse', names)
         self.assertFalse(names & {'shoot', 'menu_click', 'harvest', 'patrol_harvest', 'equip_pickaxe'})
-        self.assertTrue(all(a.seconds <= .65 for a in actions))
+        self.assertTrue(all(1.0 <= a.seconds <= 1.4 for a in actions))
         self.assertTrue(all('preimpostati' in a.reason for a in actions))

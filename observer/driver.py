@@ -97,7 +97,8 @@ class Driver:
         total_px = min(320, max(20, int(self.config.get('guided_camera_pixels', 150)))) * turn
         if name.startswith('patrol_weave'):
             total_px = round(total_px * .32)  # Strafe is the primary steering signal.
-        steps = max(4, min(12, round(duration / .20)))
+        # Small updates at 50 Hz instead of visible 200 ms camera jumps.
+        steps = max(1, round(duration / .02))
         try:
             if not self.permitted():
                 return
@@ -118,17 +119,20 @@ class Driver:
                 self.mouse_is_down = True
                 self._sent = True
             progress = 0
+            started = time.monotonic()
+            jump_start = max(1, steps // 3)
+            jump_end = min(steps - 1, jump_start + max(1, round(.12 * steps / duration)))
             for i in range(steps):
                 if not self.permitted():
                     break
-                if name == 'patrol_hop' and i == max(1, steps // 3):
+                if name == 'patrol_hop' and i == jump_start:
                     # Brief jump while W is still held. Release before the end
                     # of the segment; unconditional final release is a backstop.
                     jump = self.config['keys']['jump']
                     self.gui.keyDown(jump)
                     self.down.add(jump)
                     self._sent = True
-                if name == 'patrol_hop' and i == max(2, steps // 3 + 1):
+                if name == 'patrol_hop' and i == jump_end:
                     jump = self.config['keys']['jump']
                     if jump in self.down:
                         self.gui.keyUp(jump)
@@ -136,14 +140,16 @@ class Driver:
                 if turn:
                     # Distribute the rotation across the full W hold: no isolated
                     # camera action with W released. Caller verifies camera result.
-                    target = round(total_px * (i + 1) / steps)
+                    fraction = (i + 1) / steps
+                    eased = fraction * fraction * (3 - 2 * fraction)
+                    target = round(total_px * eased)
                     dx = target - progress
                     if dx:
-                        # Small vertical scan is contextual variation, not aiming.
-                        dy = (2 if i % 3 == 0 else -1) if name.startswith('patrol_look') else 0
-                        self.gui.moveRel(dx, dy, duration=0)
+                        self.gui.moveRel(dx, 0, duration=0)
                         progress = target
-                self._sleep(duration / steps)
+                # Include API overhead in the segment budget instead of adding
+                # it to every step and progressively slowing the movement.
+                self._sleep(max(0., started + duration * (i + 1) / steps - time.monotonic()))
         finally:
             self.release()
 

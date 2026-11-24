@@ -40,7 +40,7 @@ class NovicePolicyTests(unittest.TestCase):
         names = [a.name for a in actions]
         counts = Counter(names)
         self.assertEqual(counts['equip_pickaxe'], 1)
-        self.assertIn('reverse', counts)
+        self.assertNotIn('reverse', counts)
         self.assertNotIn('crouch', counts)
         self.assertNotIn('secondary_click', counts)
         self.assertIn('patrol_harvest', counts)
@@ -135,7 +135,7 @@ class MouseButtonRegressionTests(unittest.TestCase):
         self.assertIn(('keyDown', 'd'), gui.events)
         self.assertIn(('keyDown', 'space'), gui.events)
         self.assertIn(('mouseDown', 'left'), gui.events)
-        self.assertIn(('keyDown', 's'), gui.events)
+        self.assertNotIn(('keyDown', 's'), gui.events)
         self.assertNotIn(('mouseDown', 'right'), gui.events)
 
 

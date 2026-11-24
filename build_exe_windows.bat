@@ -5,7 +5,7 @@ cd /d "%~dp0"
 echo.
 echo ================================
 echo  OYE v44.2 - BUILD WINDOWS
- echo ================================
+echo ================================
 echo.
 if not "%OS%"=="Windows_NT" goto :windows_only
 where py >nul 2>nul

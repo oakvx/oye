@@ -1,5 +1,20 @@
 # Oye 44.2.0
 
+## Build EXE con GitHub Actions
+
+Il workflow **Build Windows EXE** (`.github/workflows/windows.yml`) parte a ogni
+push, pull request oppure manualmente da **Actions → Build Windows EXE → Run workflow**.
+Dopo test, compilazione e smoke test dell'eseguibile, gli artifact della run contengono:
+
+- **OyeStudio-windows-x64**: applicazione portatile; estrarre tutta la cartella e
+  avviare `OyeStudio.exe` (disponibile per 7 giorni).
+- **Oye-Setup-windows-x64**: installer `Oye-v44-Setup-Windows-x64.exe`, con
+  disinstallazione tramite Windows (disponibile per 14 giorni).
+
+Gli utenti finali non devono installare Python. Tesseract OCR resta una dipendenza
+separata. Il workflow deve essere presente su GitHub per poter eseguire la build;
+il pulsante manuale compare quando il file è nel branch predefinito.
+
 ## Applicazione Windows e modello visivo incluso
 
 La build locale si avvia da `dist/OyeStudio/OyeStudio.exe`, senza installare Python.
@@ -31,10 +46,17 @@ il training delle azioni richiede ancora dimostrazioni con comandi associati.
 ### Comandi già predisposti per Ignorante
 
 Una policy di regole esplicite permette di iniziare anche senza dimostrazioni:
-WASD per movimento breve, Spazio per saltare, F per selezionare il piccone e
+Movimento in avanti e laterale in tratti di 1–1,4 secondi, Spazio per saltare,
+F per selezionare il piccone e
 clic sinistro per raccogliere. E viene premuto solo con il riferimento di
 interazione riconosciuto, con almeno tre secondi tra due interazioni.
 Le associazioni rispettano `keys` nella configurazione personale.
+
+La routine evita retromarce casuali e cambi diretti da sinistra a destra.
+Le rotazioni della pattuglia sono graduate in piccoli passi, senza oscillazioni
+verticali; pausa, arresto e perdita del focus interrompono il tratto in corso.
+Tra i tratti resta la verifica visiva: OCR o acquisizioni lente possono ancora
+introdurre pause.
 
 Questi comandi sono collegati esclusivamente alla modalità Ignorante.
 Le azioni restano subordinate a HUD, focus, pausa e arresto;

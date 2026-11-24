@@ -2,12 +2,19 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
 .venv/
+.oye_runtime/
 .build-venv/
 build/
 dist/
 release/
 *.spec
+!/OyeStudio.spec
 
 # Local recordings, diagnostics, and mutable app state
 learning/
@@ -25,6 +32,7 @@ _OYE_BACKUP/
 config.json
 .env
 .env.*
+!/.env.example
 
 # Screenshot e annotazioni personali (non condividere)
 personal-dataset/
