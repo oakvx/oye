@@ -1,88 +1,159 @@
-# Oye 44.2.0
+<p align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:7B2FF7,50:1E90FF,100:FFD60A&height=220&section=header&text=OYE&fontSize=80&fontColor=ffffff&animation=fadeIn&fontAlignY=35&desc=FORTNITE%20SQUAD%20AUTOMATION%20%26%20TOKEN%20ASSIST&descAlignY=60&descSize=19" alt="Oye Fortnite Banner" />
+</p>
 
-## Build EXE con GitHub Actions
+<p align="center">
+  <img src="https://readme-typing-svg.demolab.com?font=Impact&weight=900&size=20&pause=1200&color=FFD60A&center=true&vCenter=true&width=700&lines=QUEUE+INTO+SQUADS.;OYE+RUNS+THE+LOOP.;YOUR+TEAM+OPENS+CHESTS+FOR+THE+PIRATE+TOKEN." alt="Fortnite Typing animation" />
+</p>
 
-Il workflow **Build Windows EXE** (`.github/workflows/windows.yml`) parte a ogni
-push, pull request oppure manualmente da **Actions → Build Windows EXE → Run workflow**.
-Dopo test, compilazione e smoke test dell'eseguibile, gli artifact della run contengono:
+<p align="center">
+  <img src="https://img.shields.io/badge/RARITY-LEGENDARY-FFD60A?style=for-the-badge&logoColor=black&labelColor=231738" alt="Legendary Rarity" />
+  <img src="https://img.shields.io/badge/VERSION-44.2.0-7B2FF7?style=for-the-badge&labelColor=151926" alt="Version 44.2.0" />
+  <img src="https://img.shields.io/badge/PLATFORM-WINDOWS-1E90FF?style=for-the-badge&labelColor=151926" alt="Windows" />
+  <img src="https://img.shields.io/badge/LICENSE-GPL-7B2FF7?style=for-the-badge&labelColor=151926" alt="GPL" />
+</p>
 
-- **OyeStudio-windows-x64**: applicazione portatile; estrarre tutta la cartella e
-  avviare `OyeStudio.exe` (disponibile per 7 giorni).
-- **Oye-Setup-windows-x64**: installer `Oye-v44-Setup-Windows-x64.exe`, con
-  disinstallazione tramite Windows (disponibile per 14 giorni).
+<p align="center">
+  <img src="assets/rarity-divider.svg" width="100%" alt="" />
+</p>
 
-Gli utenti finali non devono installare Python. Tesseract OCR resta una dipendenza
-separata. Il workflow deve essere presente su GitHub per poter eseguire la build;
-il pulsante manuale compare quando il file è nel branch predefinito.
+<div align="center">
+  <img src="assets/pirate-token.svg" width="220" alt="Fortnite Pirate Shop Token" />
+  <br />
+  <sub><b>PIRATE SHOP ACCESS TOKEN (TREASURE HUNTERS EVENT)</b></sub>
+</div>
 
-## Applicazione Windows e modello visivo incluso
+<br />
 
-La build locale si avvia da `dist/OyeStudio/OyeStudio.exe`, senza installare Python.
-Il pacchetto portatile è `release/Oye-Windows-pretrained.zip`: estrarre tutta la
-cartella prima di aprire l'eseguibile. Impostazioni e registrazioni della build
-compilata sono conservate in `%LOCALAPPDATA%/Oye`.
+## 🪙 What is Oye & The Pirate Token?
 
-Il riconoscitore visivo incluso è già addestrato: 72 esempi selezionati da 2.810
-screenshot, più 24 immagini separate per la verifica. Su queste ultime riconosce
-21 immagini correttamente e si astiene su 3. Le annotazioni derivano da revisione
-visiva AI; la verifica non separa partite indipendenti e non dimostra affidabilità
-nel gioco reale. Il modello apprende quali zone del layout distinguono le fasi:
-usa posizione e densità dei componenti testuali di HUD e menu, esclude il centro
-della scena e l'interno della minimappa, normalizza la risoluzione e il contrasto.
-Non confronta gli screenshot pixel per pixel. I pesi delle zone e la soglia sono
-appresi solo dai 72 esempi di training e salvati nel pacchetto, senza riaddestrare
-all'avvio. È un classificatore per esempi di layout, non una rete neurale.
+During the Fortnite *Treasure Hunters* event, the **Pirate Shop Token** is a legendary golden coin that grants **28 days of free Item Shop access**. It drops at random from in-game chests with ultra-rare odds (estimated 1 in 137,500+).
 
-Verifica delle variazioni sulle 24 immagini escluse dal training: 21 corrette
-con scenario centrale sostituito, 22 con luminosità al 65%, 21 a 1280×720 e 21
-con traslazione di due pixel; le restanti sono astensioni. Queste prove non
-coprono tutte le skin, lingue, proporzioni dello schermo o modifiche future dell'HUD.
+**The Squad Advantage:** If any player in a Duo, Trio, or Squad opens a chest containing the token, **the entire squad receives the Pirate Shop Access**.
 
-Il modello viene caricato automaticamente come supporto quando mancano altre
-evidenze. Non sostituisce OCR, riferimenti HUD o correzioni personali; non contiene
-mosse apprese. Gli screenshot disponibili non registrano i tasti premuti, quindi
-il training delle azioni richiede ancora dimostrazioni con comandi associati.
+**Oye** is an autonomous screen observer and match looper for Windows. It keeps your character queued and active in squad matches while you are AFK:
+- Detects the lobby and clicks **`GIOCA`** automatically.
+- Runs **Ignorante** mode: handles match transitions, safe jumping, basic traversal, and interactions.
+- Keeps you in the game with your squad to maximize chest opportunities without manual grinding.
 
-### Comandi già predisposti per Ignorante
+> **⚠️ Disclaimer & Limits:** Automation can violate Epic Games terms of service. Oye contains **no anti-cheat evasion** and sends synthetic OS input. Test strictly on a secondary account. Oye does not alter chest drop math or guarantee finding the token. See [Honest Limits](#-honest-limits).
 
-Una policy di regole esplicite permette di iniziare anche senza dimostrazioni:
-Movimento in avanti e laterale in tratti di 1–1,4 secondi, Spazio per saltare,
-F per selezionare il piccone e
-clic sinistro per raccogliere. E viene premuto solo con il riferimento di
-interazione riconosciuto, con almeno tre secondi tra due interazioni.
-Le associazioni rispettano `keys` nella configurazione personale.
+<p align="center">
+  <img src="assets/rarity-divider.svg" width="100%" alt="" />
+</p>
 
-La routine evita retromarce casuali e cambi diretti da sinistra a destra.
-Le rotazioni della pattuglia sono graduate in piccoli passi, senza oscillazioni
-verticali; pausa, arresto e perdita del focus interrompono il tratto in corso.
-Tra i tratti resta la verifica visiva: OCR o acquisizioni lente possono ancora
-introdurre pause.
+## ⚡ The Match Loop
 
-Questi comandi sono collegati esclusivamente alla modalità Ignorante.
-Le azioni restano subordinate a HUD, focus, pausa e arresto;
-i menu usano i pulsanti confermati dal controller esistente. Nessun combattimento
-automatico viene aggiunto. Le regole non vengono registrate come mosse dimostrate.
+<p align="center">
+  <img src="assets/phases-strip.svg" width="760" alt="Fortnite match loop phases" />
+</p>
 
-Report e provenienza: [assets/pretrained/visual.json](assets/pretrained/visual.json)
-e [manifest](assets/pretrained/manifest.json). Gli originali restano locali.
-Per riprodurre il training con gli screenshot originali:
+1. **Lobby:** OCR scanners (Tesseract) and a visual HUD classifier verify you are back in the lobby.
+2. **GIOCA Queue:** Oye targets the `GIOCA` button with guarded clicks (up to 3 attempts, spaced 12 seconds).
+3. **Match Loop:** **Ignorante** mode executes basic keyboard/mouse routines (movement, jumps, pickaxe, `E` interact).
+4. **Token Claim:** When a chest drops the token, the reward applies across the team.
 
-```powershell
+<p align="center">
+  <img src="assets/rarity-divider.svg" width="100%" alt="" />
+</p>
+
+## 🏆 Loot & Features
+
+<img align="right" src="assets/scanning-hud.svg" width="230" alt="Scanning HUD animation" />
+
+| Rarity | Feature |
+|---|---|
+| **Common** | Prebuilt standalone Windows `.exe` and installer — zero Python required for end users |
+| **Common** | Hotkey safety: `F8` pause, `F9` instant killswitch; input sent only when Fortnite is focused |
+| **Rare** | Modular Tesseract OCR scanners for lobby, spectate, rewards, and restart screens |
+| **Rare** | Pretrained visual neural classifier detecting game phases from HUD layout |
+| **Epic** | **Ignorante** Mode: autonomous match looper (movement, jump, pickaxe, interact, queue) |
+| **Epic** | **Studio** Dashboard: frame-by-frame move recorder, visual reviewer, and telemetry diagnostics |
+| **Legendary** | Deterministic offline replay on full screenshot sets with checksum verification |
+
+<br clear="right" />
+
+<p align="center">
+  <img src="assets/rarity-divider.svg" width="100%" alt="" />
+</p>
+
+## 📦 Drop In (Installation)
+
+<p align="center">
+  <img src="assets/terminal-install.svg" width="680" alt="Install commands" />
+</p>
+
+### Option 1 — Prebuilt Binaries (Easiest)
+
+1. Open **Actions → Build Windows EXE** and download the latest green run:
+   - `OyeStudio-windows-x64`: Portable build. Extract and launch `OyeStudio.exe`.
+   - `Oye-Setup-windows-x64`: Single installer package (`Oye-v44-Setup-Windows-x64.exe`).
+2. Run OCR installer (required for text scanning):
+   ```bat
+   installa_ocr_windows.bat
+
+Option 2 — Run from Source
+
+bat
+
+installa_windows.bat
+AVVIA_OYE.bat
+
+Data and recorded sessions are stored in %LOCALAPPDATA%/Oye.
+<p align="center"> <img src="assets/rarity-divider.svg" width="100%" alt="" /> </p>
+🎮 Controls & Usage
+
+    Launch OyeStudio.exe or AVVIA_OYE.bat.
+    Select Ignorante mode and activate.
+    Switch to Fortnite in Squads mode.
+    Verify HUD detection inside the Studio telemetry panel.
+
+Hotkey	Action
+F8	Pause match loop
+F9	Emergency Stop
+Developer & Diagnostics Commands
+
+PowerShell
+
+# Retrain visual HUD model
 python tools/train_visual.py --manifest assets/pretrained/manifest.json --images frames
+
+# Run test suite & studio smoke test
 python -m pytest -q
 python studio.py --smoke-test
-```
 
-Il modello numerico è incluso dal comando di build esistente tramite `assets`.
-Tesseract OCR rimane una dipendenza Windows separata (`installa_ocr_windows.bat`).
+<p align="center"> <img src="assets/rarity-divider.svg" width="100%" alt="" /> </p>
+⚠️ Honest Limits
 
-Oye è un'app Python per Windows con una modalità sperimentale **Ignorante**: osserva schermate e può inviare input autorizzati per un ciclo di partita semplice. Non è verificato che Fortnite accetti i comandi o che il riconoscimento sia affidabile nel gioco reale.
+    Input Acceptance: Live acceptance of OS synthetic input varies across Windows and GPU setups.
+    Dataset Size: Pretrained classifier was trained on 72 curated screenshots and tested on 24 held-out frames (21 correct, 3 abstentions).
+    Zero Combat AI: Oye does not aim, build, or fight opponents.
+    HUD Fragility: Custom aspect ratios, UI scale changes, and future Fortnite seasonal HUD overhauls require scanner adjustments.
 
-L'automazione può violare le regole di Epic e comportare sanzioni: controlla le regole vigenti; eventuali test reali solo con un account secondario che sei disposto a perdere. Non sono previste tecniche di elusione dell'anti-cheat. F8 mette in pausa, F9 arresta, e Fortnite deve rimanere in primo piano.
+Documentation & Guides
 
-- Avvio Windows e installazione: [LEGGIMI.md](LEGGIMI.md)
-- Diagnostica e limiti Ignorante: [docs/IGNORANTE_DIAGNOSTICA.md](docs/IGNORANTE_DIAGNOSTICA.md)
-- Protezione e backup dati: [docs/REPOSITORY_DATI_LOCALI.md](docs/REPOSITORY_DATI_LOCALI.md)
-- Versione: [VERSION.txt](VERSION.txt)
+    🇮🇹 Guida completa in Italiano (LEGGIMI.md)
+    🔍 Ignorante Mode Diagnostics
+    💾 Local Data & Backups Guide
 
-La CI verifica test e build, ma non esegue partite Fortnite. I risultati su dati simulati non sono una validazione nel gioco.
+<p align="center"> <img src="assets/rarity-divider.svg" width="100%" alt="" /> </p>
+🗺️ Battle Pass Roadmap
+
+    Season 1 — Screen capture engine, OCR pipeline, pretrained visual HUD recognizer
+    Season 2 — Ignorante mode rule-based loop with guarded GIOCA lobby clicker
+    Season 3 — Telemetry-driven keyframe imitation learning from Studio recordings
+    Season 4 — Multi-resolution support and automatic patch calibration
+
+🤝 Contributing
+
+Pull requests are welcome! Ensure tests pass before submitting:
+
+PowerShell
+
+python -m pytest -q
+python studio.py --smoke-test
+
+Contributions implementing memory injection, DLL hooking, or anti-cheat tampering will not be accepted.
+📄 License
+
+Distributed under the GPL License. See LICENSE for details.

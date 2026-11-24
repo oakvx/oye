@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="28" viewBox="0 0 800 28" role="img" aria-label="Fortnite rarity divider">
+  <defs>
+    <linearGradient id="fortniteGrad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="800" y2="0">
+      <stop offset="0%" stop-color="#9ca3af" stop-opacity="0"/>
+      <stop offset="18%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#a855f7"/>
+      <stop offset="82%" stop-color="#facc15"/>
+      <stop offset="100%" stop-color="#facc15" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="beamGlow" filterUnits="userSpaceOnUse" x="0" y="0" width="800" height="28">
+      <feGaussianBlur stdDeviation="4"/>
+    </filter>
+  </defs>
+  <rect x="0" y="11" width="800" height="6" fill="url(#fortniteGrad)" filter="url(#beamGlow)" opacity="0.6">
+    <animate attributeName="opacity" values="0.35;0.9;0.35" dur="3.5s" repeatCount="indefinite"/>
+  </rect>
+  <rect x="0" y="13" width="800" height="2" fill="url(#fortniteGrad)"/>
+  <g transform="translate(400, 14)">
+    <polygon points="0,-12 10,0 0,12 -10,0" fill="#facc15" stroke="#78350f" stroke-width="1.5">
+      <animateTransform attributeName="transform" type="rotate" values="0; 360" dur="20s" repeatCount="indefinite"/>
+    </polygon>
+    <circle cx="0" cy="0" r="3" fill="#ffffff"/>
+  </g>
+</svg>

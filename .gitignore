@@ -37,3 +37,4 @@ config.json
 # Screenshot e annotazioni personali (non condividere)
 personal-dataset/
 /frames
+boh.py

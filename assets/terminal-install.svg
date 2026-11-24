@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="165" viewBox="0 0 680 165" role="img" aria-label="Terminal installation commands">
+  <style>
+    @import url('https://fonts.cdnfonts.com/css/burbank-big-condensed-black');
+    .term-title { font-family: 'Burbank Big Condensed', 'Burbank', 'Impact', sans-serif; font-weight: 900; font-style: italic; text-transform: uppercase; font-size: 13px; letter-spacing: 0.8px; fill: #cbd5e1; }
+    .cmd { font: 600 13px 'Fira Code', Consolas, monospace; fill: #f8fafc; }
+    .prompt { fill: #a855f7; }
+    .comment { font: 400 12px 'Fira Code', Consolas, monospace; fill: #64748b; }
+    .ok { font: 600 12px 'Fira Code', Consolas, monospace; fill: #38bdf8; }
+    .gold-txt { font: 700 12px 'Fira Code', Consolas, monospace; fill: #facc15; }
+    .line1 { animation: show1 7s infinite; }
+    .line2 { animation: show2 7s infinite; }
+    .line3 { animation: show3 7s infinite; }
+    @keyframes show1 { 0%, 8% { opacity: 0; } 15%, 100% { opacity: 1; } }
+    @keyframes show2 { 0%, 35% { opacity: 0; } 45%, 100% { opacity: 1; } }
+    @keyframes show3 { 0%, 65% { opacity: 0; } 75%, 100% { opacity: 1; } }
+  </style>
+  <rect x="2" y="2" width="676" height="161" rx="10" fill="#0b0e14" stroke="#242b3d" stroke-width="1.5"/>
+  <path d="M3 12 Q3 3 12 3 H668 Q677 3 677 12 V34 H3 Z" fill="#141926"/>
+  <circle cx="22" cy="18" r="5.5" fill="#ef4444"/>
+  <circle cx="40" cy="18" r="5.5" fill="#facc15"/>
+  <circle cx="58" cy="18" r="5.5" fill="#22c55e"/>
+  <text class="term-title" x="340" y="23" text-anchor="middle">OYE // FORTNITE AUTO-LOOP CONSOLE</text>
+  <g class="line1">
+    <text x="24" y="64" class="comment">:: 1. Quick setup (dependencies + Tesseract OCR)</text>
+    <text x="24" y="84" class="cmd"><tspan class="prompt">C:\oye&gt;</tspan> installa_windows.bat &amp;&amp; installa_ocr_windows.bat</text>
+  </g>
+  <g class="line2">
+    <text x="24" y="114" class="cmd"><tspan class="prompt">C:\oye&gt;</tspan> AVVIA_OYE.bat</text>
+  </g>
+  <g class="line3">
+    <text x="24" y="142" class="ok">[OYE v44.2.0]</text>
+    <text x="145" y="142" class="gold-txt">Ignorante Ready — Queue Squads &amp; Hunt Token</text>
+    <rect x="585" y="130" width="8" height="15" fill="#facc15">
+      <animate attributeName="opacity" values="1;0;1" dur="0.9s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+</svg>
