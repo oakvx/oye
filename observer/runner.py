@@ -31,6 +31,7 @@ from .phase_ocr import PhaseOCRWorker
 from .ignorante import FINAL_SIGNALS, MAX_FRAME_AGE, IgnoranteController
 from .ignorante_ocr import cycle_ocr_worker, match_frame, playable_scene, valid_capture
 from .quick_routine import QuickRoutine
+from .command_policy import CommandPolicy
 from .region_ocr import ScreenRegionOCRWorker
 from .screen_profiles import ScreenProfiles
 from .phase_gate import PhaseGate
@@ -456,6 +457,7 @@ class Runner:
         ignorante = (IgnoranteController(time.monotonic(), matches_completed=single.matches_completed)
                      if self.quick_start else None)
         quick_routine = QuickRoutine(seed=self.seed) if ignorante else None
+        command_policy = CommandPolicy(seed=self.seed, routine=quick_routine) if ignorante else None
         quick_ocr = None
         quick_frames = {}
         quick_submit_at = float('-inf')
@@ -1575,9 +1577,16 @@ class Runner:
                                         if not was_playing:
                                             quick_routine.reset()
                                         authorized = True
-                                        decision = (Action('jump', .16, reason=offer.action.reason) if not was_playing
-                                                    else quick_routine.next_action(harvest=single.harvest))
                                         ground_hud = playable_scene(source) and source.phase_hint is None
+                                        if not was_playing:
+                                            decision = Action('jump', .16, reason=offer.action.reason)
+                                        elif ground_hud:
+                                            decision = command_policy.choose(
+                                                scene='match', authorized=True, now=now,
+                                                interaction=source.best.get('interazione'),
+                                                harvest=single.harvest)
+                                        else:
+                                            decision = quick_routine.next_action(harvest=single.harvest)
                                         decision = _ignorante_mouse_gate(
                                             decision, scene='match' if ground_hud else source.scene,
                                             gameplay_authorized=ground_hud)

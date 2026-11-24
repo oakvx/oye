@@ -28,6 +28,19 @@ evidenze. Non sostituisce OCR, riferimenti HUD o correzioni personali; non conti
 mosse apprese. Gli screenshot disponibili non registrano i tasti premuti, quindi
 il training delle azioni richiede ancora dimostrazioni con comandi associati.
 
+### Comandi già predisposti per Ignorante
+
+Una policy di regole esplicite permette di iniziare anche senza dimostrazioni:
+WASD per movimento breve, Spazio per saltare, F per selezionare il piccone e
+clic sinistro per raccogliere. E viene premuto solo con il riferimento di
+interazione riconosciuto, con almeno tre secondi tra due interazioni.
+Le associazioni rispettano `keys` nella configurazione personale.
+
+Questi comandi sono collegati esclusivamente alla modalità Ignorante.
+Le azioni restano subordinate a HUD, focus, pausa e arresto;
+i menu usano i pulsanti confermati dal controller esistente. Nessun combattimento
+automatico viene aggiunto. Le regole non vengono registrate come mosse dimostrate.
+
 Report e provenienza: [assets/pretrained/visual.json](assets/pretrained/visual.json)
 e [manifest](assets/pretrained/manifest.json). Gli originali restano locali.
 Per riprodurre il training con gli screenshot originali:
