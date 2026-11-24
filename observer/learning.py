@@ -16,6 +16,7 @@ import re
 import sqlite3
 import threading
 import uuid
+from zipfile import BadZipFile
 
 import cv2
 import numpy as np
@@ -987,7 +988,8 @@ class LearningEngine:
     def __init__(self, folder: Path, *, ocr_enabled: bool = True,
                  ocr_languages: str = 'eng', max_saved_frames: int = 3600,
                  ollama_enabled: bool = False, ollama_model: str = 'qwen2.5vl:3b',
-                 ollama_every: int = 4, ollama_timeout: float = 12.0):
+                 ollama_every: int = 4, ollama_timeout: float = 12.0,
+                 pretrained_path: Path | None = None):
         self.store = LearningStore(folder, max_saved_frames=max_saved_frames)
         self.ocr = LocalOCR(enabled=ocr_enabled, languages=ocr_languages)
         self.vlm = LocalVisionModel(ollama_model, ollama_timeout) if ollama_enabled else None
@@ -1003,6 +1005,14 @@ class LearningEngine:
         self._temporal = TemporalTracker()
         self._temporal_learned_revision = -1
         self._temporal_learned = Counter()
+        from .pretrained_visual import MODEL_PATH, VisualModel, VISUAL_SIZE
+        self._pretrained = None
+        try:
+            candidate = VisualModel.load(pretrained_path if pretrained_path is not None else MODEL_PATH)
+            if candidate.features.shape[1] == VISUAL_SIZE:
+                self._pretrained = candidate
+        except (OSError, ValueError, KeyError, EOFError, BadZipFile):
+            pass  # A missing/corrupt optional bundle must not break personal learning.
 
     def _refresh(self) -> None:
         current = self.store.revision()
@@ -1023,7 +1033,7 @@ class LearningEngine:
         self._revision = current
 
     def predict(self, feature: np.ndarray, *, scene: str, text: str = '',
-                vlm: dict | None = None) -> Prediction:
+                vlm: dict | None = None, frame: np.ndarray | None = None) -> Prediction:
         with self._lock:
             self._refresh()
             strong_text = ocr_event(text)
@@ -1057,6 +1067,13 @@ class LearningEngine:
                 return Prediction(str(vlm['event'])[:100], .6, 'ollama-vision', str(vlm.get('description', ''))[:400])
             if scene in SCENE_EVENTS and scene != 'unknown':
                 return Prediction(SCENE_EVENTS[scene], .55, 'hud', 'Classificazione tramite riferimenti HUD')
+            if self._pretrained is not None and frame is not None:
+                from .pretrained_visual import layout_features
+                layout = layout_features(frame)
+                result = self._pretrained.predict(layout) if np.count_nonzero(layout) >= 10 else None
+                if result is not None:
+                    return Prediction(result[0], result[1], 'modello-visivo-incluso',
+                                      'Ipotesi dal layout HUD revisionato da AI; nessuna azione appresa')
             if vlm and vlm.get('description'):
                 return Prediction('incerto', 0., 'ollama-incerto', str(vlm['description'])[:400])
             return Prediction('incerto', 0., 'nessuna-evidenza')
@@ -1103,7 +1120,7 @@ class LearningEngine:
                                         context=short_context, ocr=ocr.text)
             except Exception as exc:
                 vlm_error = f'{type(exc).__name__}: {str(exc)[:180]}'
-        prediction = self.predict(features, scene=scene, text=ocr.text, vlm=vlm)
+        prediction = self.predict(features, scene=scene, text=ocr.text, vlm=vlm, frame=frame)
         # Time-aware state recognition uses a tiny six-state dynamic program.
         # It never overwrites the raw visual prediction and cannot send input.
         if self._temporal_learned_revision != self._revision:

@@ -1360,6 +1360,11 @@ def smoke_test() -> int:
     import urllib.error
     import urllib.request
 
+    from observer.pretrained_visual import MODEL_PATH, VisualModel, VISUAL_SIZE
+    model = VisualModel.load(MODEL_PATH)
+    if model.features.shape[1] != VISUAL_SIZE:
+        raise RuntimeError('Modello visivo incluso non compatibile')
+
     initialize_data(ROOT, RESOURCE_ROOT)
     dashboard = Dashboard()
     token = secrets.token_urlsafe(32)

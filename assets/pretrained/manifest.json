@@ -1,0 +1,581 @@
+{
+  "annotation_source": "AI visual review of 96 contact-sheet frames; no human confirmation or observed inputs",
+  "images": [
+    {
+      "file": "000960fe1cd5433880851aa300432fac.jpg",
+      "sha256": "caa43434aa190d4aa6611a01ce2553897044ef9b0192acae068de8c4298a76f3",
+      "label": "partita in corso",
+      "split": "holdout"
+    },
+    {
+      "file": "0585cd1c32c74ab6b9c3d6370cec5a03.jpg",
+      "sha256": "54685cefd1f5dc08f8be1c633f942c8d975c2d5a719ec53f5761afe9df119a9d",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "0aa9960d5c8140efb76aac82d743bb54.jpg",
+      "sha256": "12a284099889676a26aa65c28547eeb8f69b8b12436a6f1dd8c5e009cda0d126",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "0f6ae07df3ff4b06b24296c7eb4e16a2.jpg",
+      "sha256": "53a3c1f3e4564e116394e1053c0bd69e53157f931522a6287387b395444a541c",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "13ce25b4eeac41fab03457e1bbbeca33.jpg",
+      "sha256": "a9023effbcf690733f79e0273ba72b26cdff02ce1622b7b5fcd46c9659f94ad4",
+      "label": "ricerca partita",
+      "split": "train"
+    },
+    {
+      "file": "19a853a0d2a14bad84d33ecaf178ff37.jpg",
+      "sha256": "15461b827af93b05ba665062e2da0375ff767955bf35c36213b305784c37c940",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "1e6f74779f2d4ae0937add4877aba36d.jpg",
+      "sha256": "fa32d4142e217fda9ae28bf0b319baea627edc272755f858dc70ee2c02e4516b",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "241da8093ca04f14bfc0d3b47fe0b249.jpg",
+      "sha256": "a8dfae6da059d22c3a26ce9a539bdeb7ef0cbf438175448d62e461affff86411",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "299a2d3df68e483eafe753b5c72f287c.jpg",
+      "sha256": "008002bec6c895e97d4b4c450d7b0b58e6882c7336c28ce59fbebfdff7d4bfab",
+      "label": "partita in corso",
+      "split": "holdout"
+    },
+    {
+      "file": "2e70e8129ede4e49b91d1b4acc83afee.jpg",
+      "sha256": "6686360d14eb5d75ac4241a12290c9e787eca8a58197785a70938b003061b0a6",
+      "label": "risultati partita",
+      "split": "train"
+    },
+    {
+      "file": "342df073c5934caf93d9dc80a93c8acd.jpg",
+      "sha256": "030db18e7986cf42c11d384e5463ae124c51a9f43275c2d09464be32a54e67d1",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "398fb51da495405ca2704227072b1d5b.jpg",
+      "sha256": "5f79166042fa085f1bc9a036b728b0fe70c4933dffcc5a7d411480d03390bc59",
+      "label": "modalità spettatore",
+      "split": "train"
+    },
+    {
+      "file": "3f04df20ba2a4c6e8c5270efd9f1e98c.jpg",
+      "sha256": "c791a53b197dd3a5934d3187bbe4043225cf21669881ea1a03c01f544deb5a8d",
+      "label": "partita in corso",
+      "split": "holdout"
+    },
+    {
+      "file": "44abde45c42e446784aa98c9c9701103.jpg",
+      "sha256": "a449f55795b4f27bb9e286cba4204de9d93baeb14bc93d5bfd2be398cb7c2ca1",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "48cc8643a7974aa899285ffd3799b1da.jpg",
+      "sha256": "4fd231d653bfa1ffaab31aed24cf626ae0a9adb795c12838099d3572ddb5a9c0",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "4dd811859b3c43ce8690a49a1ca03202.jpg",
+      "sha256": "a4e94f9e4cca2328acd7dca94f1d70a04e7bfd509d2d6afb96775e9b8464e1e5",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "5391e2bd8a6f4d9ca4c9490a25383a06.jpg",
+      "sha256": "83e72f084c09928e6b5c15e9258dd27a4a0cf0993e9d0658d3a18bc7463c41fa",
+      "label": "partita in corso",
+      "split": "holdout"
+    },
+    {
+      "file": "5990392af2a54d098f20be85c95e37a1.jpg",
+      "sha256": "e6331b18dc4b63c0d4f27e8f3bbec1e9679cc7d9bcea716a0f0fbf32e1bda6e1",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "5e25242bf290423bac8a4c8074a296e6.jpg",
+      "sha256": "02b9615ebc5ff3ddc40d0789ae0fedcee692c94d02b344437583adfa873e5fa3",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "6256ba42425b4d8fbb84bec31001f491.jpg",
+      "sha256": "63a0fd3c0176a6e808992d7ad882648aba3fcaa2d8b2f81c7fc2678cd4c5fa99",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "6822be012d07421d90a1fefdfa94d0ce.jpg",
+      "sha256": "00738e988f494eff3d293dea0c496a1b0a603077585168c429360211db2e0bb5",
+      "label": "modalità spettatore",
+      "split": "train"
+    },
+    {
+      "file": "6cfea06f5b3e438fb11805815f503c8c.jpg",
+      "sha256": "b9319919fcd4cae7fe89e3aa3a391c3925c0352de916a487dddd4bb777a93e2a",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "72c9a3be5ac14cc8a22cd2596e874e2b.jpg",
+      "sha256": "c63ecd799b5916bf0f89d1fad91010534acb6503dced72b0018d8826b931953d",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "77be214b03fc4fae9df7c37b5fb4763b.jpg",
+      "sha256": "11321937e6f55e1caef4a410fdfb9ffbe61811828cb666f06d21e607ce7d380d",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "7cfd8f5286ad4628af4b17b65370fc58.jpg",
+      "sha256": "2452056a888bab07dc6e18287f1e96119c01c501db992f41f2453aff90f724cb",
+      "label": "partita in corso",
+      "split": "holdout"
+    },
+    {
+      "file": "8325064240e447a782330660426b0030.jpg",
+      "sha256": "c69d02bb0bf905142e9d913c8f00c06a321f99b96c78f0ed1948b6bc09c822b0",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "879e99576b5b44219ef0d5e3779fe378.jpg",
+      "sha256": "a90f9731b9957a726e922c46826a18813f64f3814a7ab0ce7de696ee45e00731",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "8c43a2e0b7814c60a625c61134ad4195.jpg",
+      "sha256": "a839d02f2d437e2541002e3b292c85442185f2e49682d118ed8f039dda1cfd87",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "91da5b63759246d18d22926cc1a21fea.jpg",
+      "sha256": "a3aa2981249cdf7c5bcaa600b93ca38fdfd26eb309fef1ecc7684b3437e2e1e4",
+      "label": "partita in corso",
+      "split": "holdout"
+    },
+    {
+      "file": "9678b34083ea409ca29cb994ca5bb94e.jpg",
+      "sha256": "eb1f7ad6a6e9b0afb60f1f775336de55d510d25e9be1e3a9ba720903dbb58dfa",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "9b552a01bc8746dba3939e0e40934407.jpg",
+      "sha256": "7f4d98ef621f1e4be9a717e949e3ac4fccd708fc37dd435514cd2c1f71b9d168",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "a0608d0760434d668de5a234eeda6c60.jpg",
+      "sha256": "4680098f12548ee0ce910cb6892c69b271daf24a5485153434d3d4b82befea33",
+      "label": "lobby",
+      "split": "train"
+    },
+    {
+      "file": "a5a03cef241442419fccbec424ab82f5.jpg",
+      "sha256": "09721ae92361a5190c6b43be22c9fd5ba082954d7fda33b0b4e3961ed490ec12",
+      "label": "partita in corso",
+      "split": "holdout"
+    },
+    {
+      "file": "a9787285c1894bbaa510c54f79de4b74.jpg",
+      "sha256": "ad45cf51c6746f0d633ecee18a244d2633ea4686f9c95c8de1facd0688cfbdd8",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "ae4052d36c5549c38c28de01cf3bb8e6.jpg",
+      "sha256": "f746f24803674f94bc8708066b5e86445bc134683b3ae0f48f771eb9cb4599b0",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "b2ecf70c845f440da2aec237361571e1.jpg",
+      "sha256": "44a236628c2b521137a0bd1dab44ab201a4f1fb1a7ef34171957be5b306c0122",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "b790e530637a4604b6ead57606f0d2a8.jpg",
+      "sha256": "46b7b5f80cfc899001016369b06147a6457cef283a38b6aa701dc75e760a0d1e",
+      "label": "partita in corso",
+      "split": "holdout"
+    },
+    {
+      "file": "bccc4115e0d34c488231e48b604becaa.jpg",
+      "sha256": "655b1d917a893eea09bf7e4a0e692e4f18ab325ef683a63e8fb4ac2e2d8aea5d",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "c362aad6bc624c968071208a1d539389.jpg",
+      "sha256": "cbd97d9e4aa777b4f9d0caafc5a2ad60ad9189df2dca1c24ea87305a88dd7e77",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "c9478d473ecd4287927694e183181609.jpg",
+      "sha256": "f29dcea804e17c82121252d203dc86350d8192eb56bf92fc8dc20cd2a4fba1c7",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "cef8a8cd0d904315a2439a315478a81f.jpg",
+      "sha256": "0d3816d13a41cd75824911bd91498925000c2c61a256958c930d2fcafc53f016",
+      "label": "partita in corso",
+      "split": "holdout"
+    },
+    {
+      "file": "d4176558b1a1469285b1d164f516d310.jpg",
+      "sha256": "98f572064bb9f69a409a3a3de22ff91e123d3012a8f4b4ce919e032a3a83ec79",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "d9fb25de9b4f4471a740f14ee1d96e11.jpg",
+      "sha256": "538df6465caad12776470e66608541096b2fb3094ccd28d4813c2370d9dc7438",
+      "label": "lobby",
+      "split": "holdout"
+    },
+    {
+      "file": "df99c71c84f949d387c12b788eb02ebf.jpg",
+      "sha256": "c04e124d1a06b26d34f63b1c817b7d2573da2f1670f2eae024b423bb71d4e4db",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "e599601b83b0485998521a736c92d847.jpg",
+      "sha256": "991c2e5b2388b9c19b56eee363c51074b701a79f32541c9172c4c5171f64e08b",
+      "label": "lobby",
+      "split": "holdout"
+    },
+    {
+      "file": "eb19b5aabed342fe804d4b1d7f478c7f.jpg",
+      "sha256": "ef2379cd6461216b38682bff9c01b9351c41cdebfd9d9cf4b2261da0397978cd",
+      "label": "personaggio a terra",
+      "split": "train"
+    },
+    {
+      "file": "f19c4f7f291047e6822d7a015db9fc1c.jpg",
+      "sha256": "ef183d0ebc9a297e058413ba2f88a236b9c798b0bf58c7e6709f3c5e3115617e",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "f78e1b277e3140d887d8203aabb44e16.jpg",
+      "sha256": "272d5d63c2d39e5be29cd363c24db31fcfbb4cd55aecdc8d85ba1da7819af346",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "0230d5adb68e4597a973dce2b8e04d8f.jpg",
+      "sha256": "0899d1cc8a16aa4e6d576959267f29f324125d96118779a0707130b5f07fbdda",
+      "label": "partita in corso",
+      "split": "holdout"
+    },
+    {
+      "file": "07c104712f264fe190e93bcd39780c99.jpg",
+      "sha256": "1289ac5cefb89785cab3911fd712b3db2804667efc44589b6994e7263b314aaf",
+      "label": "discesa",
+      "split": "train"
+    },
+    {
+      "file": "0cf9d68b614749cf9ea8922ffd8f62d8.jpg",
+      "sha256": "403d1cb4029c86af947f9bb725edfc8cc885c9761e0858389d570318caf53bcc",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "11d07a400d7a4193b56d6e815fec3b47.jpg",
+      "sha256": "18310d74c9d27f24ff886cb6628e5cceec69223dc57a5843fc7ba86bf04b94ef",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "16539d8da3204da1a38eeb9c8b6646e8.jpg",
+      "sha256": "85e2f09eaeb223118a19c74924fa69354ce61bae64db895bdcc3db834e5020f7",
+      "label": "partita in corso",
+      "split": "holdout"
+    },
+    {
+      "file": "1b213c17cbf84ad7966cfc3e93851901.jpg",
+      "sha256": "7e4b32ce252afcb444b355f02be25164adbd25e8484421aec1362dafe73d79dd",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "216bb287162e431c9597a6916624b86a.jpg",
+      "sha256": "28d3125988cb50f4a9c1b72b95e7a12f50b1551f470fe45dbf366c16064f552d",
+      "label": "modalità spettatore",
+      "split": "train"
+    },
+    {
+      "file": "27275ac91d914612ac704cc2b39265ec.jpg",
+      "sha256": "903d501a8f521f542abed83d31f9d1a1665d604194265597df00ecebfa6eb443",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "2c18a505107e4fa2a55fb40f828fb389.jpg",
+      "sha256": "4417e210d88acbefd64edf9e568a62621767b766600d4ec252d41981bf2454b5",
+      "label": "partita in corso",
+      "split": "holdout"
+    },
+    {
+      "file": "318d66e90bf841769578223c38ae32d4.jpg",
+      "sha256": "c0282ff66dcc8ec441e90929986333ac2273e97bfcc1c6fb809940e716aa705e",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "373c0a6ceb9c42b98e235aaa5069853f.jpg",
+      "sha256": "f0130858ae71bf2aa4d9530a3cb3877206e9e7ff0cfab9a659f8088581a6a6ad",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "3ca6b36a3e3245718eb64f926d72ad97.jpg",
+      "sha256": "9d5ffb4a5ceb8a9eaac4eba85d17797c9a89e15167da838a69f4a208a8e329be",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "41fad8425e904b2dbeb2e8106755fb29.jpg",
+      "sha256": "2c85a45102e34ddf620b3f1a7cf4247519556593f1604063213f2d475a0afab2",
+      "label": "partita in corso",
+      "split": "holdout"
+    },
+    {
+      "file": "4716b7921c734253bc350eb02971309c.jpg",
+      "sha256": "ad78058d8e4b339a201ac090d6a991d9b81e8e6ec73fde6ed6a846cf89402441",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "4b9032658e084c5fa3bf2bca09bf6718.jpg",
+      "sha256": "3ba27af04489728f4d594fa046876d175ea41893d71d4c24ac4d81fa447dddf3",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "508b549a4ef849f2beb1673a547a51fb.jpg",
+      "sha256": "13e03675ac25da55a0ef32dc7e8a7c69519668a60266278574638209bc542df4",
+      "label": "mappa aperta",
+      "split": "train"
+    },
+    {
+      "file": "56ab6cf04a6844bea1bfda8e0db83c7e.jpg",
+      "sha256": "72145ec0a2d9a6dec5c78a369115af5e950eb35256309b9afe6d1a018cf9c836",
+      "label": "risultati partita",
+      "split": "train"
+    },
+    {
+      "file": "5c611024c1ec418798cd29df55b2ed17.jpg",
+      "sha256": "cd2d3ba163d50c9f6af580b1d3d9ee09f1ef01a9793b5c86a752642917c77400",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "6016b6914c7b462583c1bd61c912669e.jpg",
+      "sha256": "aa6d64bc1f387455cc25e410ff3e3191b054ad67eea949b0d8bd2eb9735fd14f",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "650308493999471f8e36eacabc9b0b6c.jpg",
+      "sha256": "a0fd6eff6a8aa454e747202d9b2d4afb2dd1fb0806e03a139e5dcb30f4d9366a",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "6a8bb5828b76437c9bdaa5236da1db1c.jpg",
+      "sha256": "7c0af90455c336e87a1eb9ce4ee62978f0e286591d62054c0506d71b933bea50",
+      "label": "partita in corso",
+      "split": "holdout"
+    },
+    {
+      "file": "6fb978748d0a4f9983c58079b82f4e8b.jpg",
+      "sha256": "69cb24baa61e5f38bb3d536ecb23b594f1e1f3a32a23c74894051e8f45ab9eb8",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "750d334059b94fd5bb9d59d811b975d4.jpg",
+      "sha256": "80d0efdb663bbaa689ac280c4598564e8f183e236131ae0bfa0fe789ab422a0a",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "7ac54760439241ec99c1a5d0f8324843.jpg",
+      "sha256": "8db32690f6dce3fc37f3a09aef3cef58de1f6de34361183d9b3a922b220974ff",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "809a6313e8404a538d8f38d0b7c11f3e.jpg",
+      "sha256": "0d65e1e5b3bbfa30a58b4ef6350ce104e4b2156b41d39dae811750730aed8eae",
+      "label": "partita in corso",
+      "split": "holdout"
+    },
+    {
+      "file": "859098d19ba04ddc9ac7effaccf3fe5c.jpg",
+      "sha256": "ef1ff2bb7e3ea1b7f2c11b7b359927319b8152ba24c3f08720afffb0161fac4e",
+      "label": "modalità spettatore",
+      "split": "holdout"
+    },
+    {
+      "file": "89c92a3416314bf4a92831bc7568a4a2.jpg",
+      "sha256": "d00327cffcf9ff1f642c61abfe9c9800169078b81fa569504d2339a3fa9172da",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "8eb2602a22254f6597e4022d1aee1be8.jpg",
+      "sha256": "b3517dd26be942882d822ada730f737b7f074600b9372a87ddb013ac235760b3",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "938a002049894ecb9068a189c06421e5.jpg",
+      "sha256": "a35a95559cc52ec967bd6d87da9c7b6f519afc4223a9da4deeb982da5ba8f499",
+      "label": "partita in corso",
+      "split": "holdout"
+    },
+    {
+      "file": "98f442ab6faa436fba1777d59181abb4.jpg",
+      "sha256": "435bb3b259976e321de92ffc81ceaaadd7168d1bc724a376adf1e12efcc9ef3b",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "9dac747523374befba7727e9292a6c51.jpg",
+      "sha256": "8cb84abdd4af797033b6f5ef15d1e954c49b239b8855b624b3d6544a50bf029e",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "a2eff3fd86e94f58b57708ed46bf2c55.jpg",
+      "sha256": "eaa9d2117b66d2fd56689baf32e9f4dd56b780981e529d65d12515358731d521",
+      "label": "vittoria",
+      "split": "train"
+    },
+    {
+      "file": "a7ae20f85993482689eaf340d2d9ba74.jpg",
+      "sha256": "bcb3c1aabdc00c64ae48f385d8f4fd05e2ebfd0a4a321bda70aec21870d772c6",
+      "label": "menu sociale",
+      "split": "train"
+    },
+    {
+      "file": "ab9f1fc49f814998aa339bfd76f184b0.jpg",
+      "sha256": "540962a7ea7e7c79496365e00a08c4da635e413e20667866f74334625711d7a9",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "b083e0e32b5741e78b57b6351bd82207.jpg",
+      "sha256": "b8f79a24a3500f7e3d79f8aa7e1a9cf0ebeb898884414c7156bd21c10e8c787b",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "b4c4d2a1f49f4767b8686d3f8b0af853.jpg",
+      "sha256": "e872c729898b9ea8420fe0c2a4fd5bcf1773a8f6b246fa761b1b76ddeb72651b",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "ba2e3083707d410489882cb305947c3c.jpg",
+      "sha256": "721de4547105b2d08b040abb16a8aacfca5caf3616a563430fe2ddf2e7bb630d",
+      "label": "partita in corso",
+      "split": "holdout"
+    },
+    {
+      "file": "bff19090b76a4340ba60ff4ee2a303b1.jpg",
+      "sha256": "aa7053420cbb6ceaf936237c8547fcd91ede76bcea0f13ab9d984cc3ecb5f99a",
+      "label": "menu sociale",
+      "split": "holdout"
+    },
+    {
+      "file": "c68317e34f4f453ca4260d8e618168c3.jpg",
+      "sha256": "a94b1b13174d344a638896ca0f647aaf0680bcb1ae8a4aeb662ba2476f9cd55c",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "cc99944889d44e78b33f27f39750074d.jpg",
+      "sha256": "f273ac51184710d9b3bb7fbca73557ca3e4f950c522f3733d69178b3bf5c0aea",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "d1b5dd8c04204c29abb58ded0fd4e7b6.jpg",
+      "sha256": "c876ea5c2def27dbb6c67d5734f92c9fd46b98d5b75a6b0e44d982e3f64b00f5",
+      "label": "partita in corso",
+      "split": "holdout"
+    },
+    {
+      "file": "d6d0ddf6f3c64399aa05b9fbc5692144.jpg",
+      "sha256": "6ad0c073771051137d2298ac92a1a6f148ab6ebbe98404b959345a784492338b",
+      "label": "risultati partita",
+      "split": "holdout"
+    },
+    {
+      "file": "dc234b741e974ad4ab4e5b4d16d238ba.jpg",
+      "sha256": "8a3a4532ae0b053fe388c1bf800a06baad2d3112352d8113728f947a27eaabb0",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "e1f55725c5334fe99bd6a00d02ce103f.jpg",
+      "sha256": "5cb4d97231211314fd1ab5bbde734999a7992cdb63ed1c5b105be4201a3f5112",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "e8492fb57b1b4be8b86ca708621567a1.jpg",
+      "sha256": "a0fb287366351c7b43d2702a2b679f70217d2293d9659d0275a2ad8745bd1b4b",
+      "label": "partita in corso",
+      "split": "holdout"
+    },
+    {
+      "file": "edf479e473074ad88398563b941f0d6f.jpg",
+      "sha256": "a208bc57e789ab2c48342ed041ee0079cf688d1b71eec1cbf8a852fe0d899f68",
+      "label": "partita in corso",
+      "split": "train"
+    },
+    {
+      "file": "f4acf6e013764e908bab161ea9457cf7.jpg",
+      "sha256": "241dc50dbeca81b143376faf501762713c93c44eb7f618ea3275354c15e3ad56",
+      "label": "eliminazione",
+      "split": "train"
+    },
+    {
+      "file": "faa2763e2fc24dd4a08f39e9df7a13ee.jpg",
+      "sha256": "9081383c8e5a2188f7325fdcd1d0b805cfb82347cbe985a6faa0b61b8d9014aa",
+      "label": "partita in corso",
+      "split": "train"
+    }
+  ]
+}

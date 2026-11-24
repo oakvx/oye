@@ -1,0 +1,149 @@
+{
+  "model": "hud-layout-exemplar-v2",
+  "annotation_source": "AI visual review",
+  "manifest_sha256": "adf8654f46e1965738b97706914f0139715d3f72f21ec9fb75fccbfbf7545dd3",
+  "training_samples": 72,
+  "holdout_samples": 24,
+  "training_classes": {
+    "partita in corso": 59,
+    "ricerca partita": 1,
+    "risultati partita": 2,
+    "modalità spettatore": 3,
+    "lobby": 1,
+    "personaggio a terra": 1,
+    "discesa": 1,
+    "mappa aperta": 1,
+    "vittoria": 1,
+    "menu sociale": 1,
+    "eliminazione": 1
+  },
+  "holdout_covered": 21,
+  "holdout_correct": 21,
+  "action_examples": 0,
+  "validated_autonomous_play": false,
+  "limitations": [
+    "Holdout per immagine, non per partita: sessioni originali sconosciute.",
+    "Possibili fotogrammi simili tra train e holdout.",
+    "Etichette AI da verificare; nessun comando dedotto dalle immagini."
+  ],
+  "outcomes": [
+    {
+      "expected": "partita in corso",
+      "predicted": null
+    },
+    {
+      "expected": "partita in corso",
+      "predicted": "partita in corso"
+    },
+    {
+      "expected": "partita in corso",
+      "predicted": "partita in corso"
+    },
+    {
+      "expected": "partita in corso",
+      "predicted": "partita in corso"
+    },
+    {
+      "expected": "partita in corso",
+      "predicted": "partita in corso"
+    },
+    {
+      "expected": "partita in corso",
+      "predicted": "partita in corso"
+    },
+    {
+      "expected": "partita in corso",
+      "predicted": "partita in corso"
+    },
+    {
+      "expected": "partita in corso",
+      "predicted": "partita in corso"
+    },
+    {
+      "expected": "partita in corso",
+      "predicted": "partita in corso"
+    },
+    {
+      "expected": "lobby",
+      "predicted": "lobby"
+    },
+    {
+      "expected": "lobby",
+      "predicted": "lobby"
+    },
+    {
+      "expected": "partita in corso",
+      "predicted": "partita in corso"
+    },
+    {
+      "expected": "partita in corso",
+      "predicted": "partita in corso"
+    },
+    {
+      "expected": "partita in corso",
+      "predicted": "partita in corso"
+    },
+    {
+      "expected": "partita in corso",
+      "predicted": "partita in corso"
+    },
+    {
+      "expected": "partita in corso",
+      "predicted": null
+    },
+    {
+      "expected": "partita in corso",
+      "predicted": "partita in corso"
+    },
+    {
+      "expected": "modalità spettatore",
+      "predicted": null
+    },
+    {
+      "expected": "partita in corso",
+      "predicted": "partita in corso"
+    },
+    {
+      "expected": "partita in corso",
+      "predicted": "partita in corso"
+    },
+    {
+      "expected": "menu sociale",
+      "predicted": "menu sociale"
+    },
+    {
+      "expected": "partita in corso",
+      "predicted": "partita in corso"
+    },
+    {
+      "expected": "risultati partita",
+      "predicted": "risultati partita"
+    },
+    {
+      "expected": "partita in corso",
+      "predicted": "partita in corso"
+    }
+  ],
+  "robustness": {
+    "world_replaced": {
+      "checked": 24,
+      "covered": 21,
+      "correct": 21
+    },
+    "brightness_65_percent": {
+      "checked": 24,
+      "covered": 22,
+      "correct": 22
+    },
+    "resolution_1280x720": {
+      "checked": 24,
+      "covered": 21,
+      "correct": 21
+    },
+    "shift_2_pixels": {
+      "checked": 24,
+      "covered": 21,
+      "correct": 21
+    }
+  }
+}
