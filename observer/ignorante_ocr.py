@@ -1,6 +1,7 @@
 """Read complete lifecycle labels in the corresponding Fortnite UI regions."""
 from dataclasses import dataclass, field
 from functools import partial
+import re
 
 import cv2
 import numpy as np
@@ -16,6 +17,7 @@ ZONES = (
     ((.66, .22, .97, .66), ('gioca_di_nuovo', 'torna_lobby')),
     ((.38, .041, .55, .093), ('posizione_finale',)),
     ((.337, .155, .548, .215), ('posizione_finale',)),
+    ((.55, .48, .94, .65), ('aerial_prompt',)),
 )
 CLICKABLE = frozenset({'gioca', 'gioca_di_nuovo', 'torna_lobby'})
 
@@ -30,6 +32,16 @@ def valid_capture(frame):
 @dataclass(frozen=True)
 class CycleOCRResult(PhaseOCRResult):
     matches: dict[str, Match] = field(default_factory=dict)
+    phase_hint: str | None = None
+
+
+def aerial_phase(text):
+    text = normalize(text)
+    if re.search(r'\b(spazio per saltare|space to jump|space per saltare)\b', text):
+        return 'battle_bus'
+    if re.search(r'\b(spazio per schierare|spazio per aprire|space to deploy|space to skydive)\b', text):
+        return 'skydiving'
+    return None
 
 
 def _button_crops(gray, rect):
@@ -75,14 +87,22 @@ def read_cycle_labels(frame, at: float, *, language='eng') -> CycleOCRResult:
     crops = []
     offset = 12
     for rect, names in ZONES:
-        if 'posizione_finale' in names:
+        if 'posizione_finale' in names or 'aerial_prompt' in names:
             x1, y1, x2, y2 = rect
             x, y = round(x1*w), round(y1*h)
             title = gray[y:round(y2*h), x:round(x2*w)]
             title = cv2.threshold(title, 200, 255, cv2.THRESH_BINARY_INV)[1]
             candidates = [(x, y, title)]
         else:
-            candidates = _button_crops(gray, rect)
+            candidates = list(_button_crops(gray, rect))
+            if not candidates:
+                # Highlighted/dark controls have no solid white rectangle.
+                # Read only their known region, still requiring the full label.
+                x1, y1, x2, y2 = rect
+                x, y = round(x1*w), round(y1*h)
+                zone = gray[y:round(y2*h), x:round(x2*w)]
+                zone = cv2.threshold(zone, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
+                candidates = [(x, y, zone)]
         for x, y, crop in candidates:
             crops.append((x, y, offset, crop, names))
             offset += crop.shape[0] + 24
@@ -94,6 +114,7 @@ def read_cycle_labels(frame, at: float, *, language='eng') -> CycleOCRResult:
     data = tess.image_to_data(montage, lang=language, config='--psm 6',
                               output_type=tess.Output.DICT, timeout=2)
     matches = {}
+    phase_hint = None
     for words in _lines(data, montage.shape[1], montage.shape[0]):
         label = ' '.join(word[4] for word in words)
         score = min(word[5] for word in words) / 100
@@ -106,6 +127,10 @@ def read_cycle_labels(frame, at: float, *, language='eng') -> CycleOCRResult:
                     row <= top < bottom <= row+crop.shape[0]):
                 continue
             for name in names:
+                if name == 'aerial_prompt':
+                    if score >= .60:
+                        phase_hint = aerial_phase(label) or phase_hint
+                    continue
                 exact = label in PHRASES[name]
                 title = name == 'posizione_finale' and any(
                     label == phrase or label.startswith(phrase + ' ') for phrase in PHRASES[name])
@@ -114,7 +139,7 @@ def read_cycle_labels(frame, at: float, *, language='eng') -> CycleOCRResult:
                     center = (round((x + (left+right)/2 - 12)*width/w),
                               round((y + (top+bottom)/2 - row)*height/h))
                     matches[name] = Match(name, title_score if title else score, center)
-    return CycleOCRResult(at, 'ok', matches=matches)
+    return CycleOCRResult(at, 'ok', matches=matches, phase_hint=phase_hint)
 
 
 def cycle_ocr_worker(language: str) -> PhaseOCRWorker:
@@ -136,7 +161,7 @@ def match_frame(result: PhaseOCRResult, reading, *, left=0, top=0, locked=False,
     signals = frozenset(result.matches) | (reading.best.keys() & (FINAL_SIGNALS | {'annulla'}))
     buttons = {name: Match(name, item.score, (left+item.center[0], top+item.center[1]))
                for name, item in result.matches.items() if name in CLICKABLE}
-    playable = playable_scene(reading)
+    playable = playable_scene(reading) or result.phase_hint is not None
     playable_at = result.at if playable else modular_at
     blocked = locked or reading.scene == 'loading' or ('lobby_indizio' in reading.best and not playable)
     return MatchFrame(result.at, True, signals, buttons, playable_at is not None,

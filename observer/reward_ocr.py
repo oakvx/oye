@@ -42,8 +42,8 @@ def ocr_available() -> bool:
 def is_reward_screen(text: str) -> bool:
     """A reward *screen*, not a shop's generic RISCATTA call to action.
 
-    Accept singular/plural Italian headers, imperfect OCR word endings, or the
-    pair EQUIPAGGIA + RISCATTA. Unrelated shop CTA text stays negative.
+    Accept singular/plural Italian headers and imperfect OCR word endings.
+    The footer pair is checked separately with position and lifecycle context.
     """
     import unicodedata
     clean = unicodedata.normalize('NFKD', text or '').casefold()
@@ -53,8 +53,8 @@ def is_reward_screen(text: str) -> bool:
                      any(t.startswith('otten') for t in tokens))
     english_title = bool(('rewards' in tokens or 'reward' in tokens or 'items' in tokens) and
                          ('unlocked' in tokens or 'obtained' in tokens))
-    # EQUIPAGGIA + RISCATTA can also occur outside a reward overlay.
-    # A reward TITLE is therefore required, even in the lobby.
+    # Unpositioned text alone needs a title. The worker can also verify the
+    # two footer buttons with their coordinates and the lobby stage.
     return has_title or english_title
 
 
@@ -129,6 +129,25 @@ def extract_results_button(data: dict, *, scale: float, left: int, top: int,
         if choice is None or confidence > choice[1]:
             choice = (position, confidence, name)
     return choice
+
+
+def extract_reward_footer(data: dict, *, scale: float, left: int, top: int,
+                          crop_y: int, original_height: int):
+    """Return CLAIM only when EQUIP is visible beside it in the lower screen."""
+    kwargs = dict(scale=scale, left=left, top=top, crop_y=crop_y,
+                  original_height=original_height)
+    claim = extract_reward_button(data, **kwargs)
+    equip_data = {**data, 'text': [
+        'riscatta' if re.sub(r'[^a-z]', '', str(word).casefold())
+        in {'equipaggia', 'equip'} else '' for word in data.get('text', [])]}
+    equip = extract_reward_button(equip_data, **kwargs)
+    if claim is None or equip is None:
+        return None
+    if (min(claim[0][1], equip[0][1]) - top < .65 * original_height or
+            abs(claim[0][1] - equip[0][1]) > .06 * original_height or
+            abs(claim[0][0] - equip[0][0]) < 60 / scale):
+        return None
+    return claim[0], min(claim[1], equip[1])
 
 
 class RewardOCRWorker:
@@ -240,6 +259,24 @@ class RewardOCRWorker:
                         return pytesseract.image_to_string(gray, lang=self.language,
                             config='--psm 7', timeout=1.8)
                     overlay = match_reference(bgr, taught_title, 'reward_title', title_ocr) is not None
+                # Some rewards show only EQUIP / CLAIM, without a readable title.
+                # Read both controls together, only during the lobby lifecycle.
+                lobby_stage = stage in ('await_play', 'post_lobby', 'claim_rewards', 'returning', 'lobby')
+                if lobby_stage:
+                    footer_y = int(.65 * h)
+                    footer = cv2.cvtColor(bgr[footer_y:], cv2.COLOR_BGR2GRAY)
+                    footer_scale = min(1., 1280. / w)
+                    if footer_scale < 1:
+                        footer = cv2.resize(footer, None, fx=footer_scale, fy=footer_scale,
+                                            interpolation=cv2.INTER_AREA)
+                    data = pytesseract.image_to_data(footer, lang=self.language,
+                        config='--psm 11', output_type=pytesseract.Output.DICT, timeout=4.)
+                    pair = extract_reward_footer(data, scale=footer_scale, left=left,
+                        top=top, crop_y=footer_y, original_height=h)
+                    if pair is not None:
+                        overlay = True
+                        match = (pair[0], pair[1], 'riscatta')
+                        learned = False
                 if overlay and match is not None and match[2] == 'gioca':
                     match = None  # never let PLAY mask a reward panel
                 # First look for prominent colored CTA rectangles. OCR of a
@@ -261,7 +298,10 @@ class RewardOCRWorker:
                 # Fallback to broad lower/central regions for non-colored CTAs.
                 for x0,y0,x1,y1 in ((0,.25,1.,1.), (.22,.42,.84,.96), (.48,.42,1.,.96)):
                     regions_px.append((int(w*x0),int(h*y0),int(w*x1),int(h*y1)))
-                for index, (px0, py0, px1, py1) in enumerate(regions_px if match is None else []):
+                # With neither title nor footer pair, further CTA reads cannot
+                # authorize a claim. Keep negative lobby checks fresh and fast.
+                scan_buttons = match is None and (overlay or not lobby_stage)
+                for index, (px0, py0, px1, py1) in enumerate(regions_px if scan_buttons else []):
                     crop = bgr[py0:py1,px0:px1]
                     if crop.size == 0:
                         continue

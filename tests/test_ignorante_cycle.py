@@ -92,3 +92,40 @@ def test_direct_restart_cannot_count_one_modular_hud_detection_twice():
         observation = MatchFrame(at, True, playable=True, playable_at=detected_at)
         assert not cycle.observe(observation, now=at).move
     assert cycle.observe(MatchFrame(12, True, playable=True, playable_at=11.5), now=12).move
+
+
+def test_manual_start_can_join_matchmaking_without_automatic_play_click():
+    cycle = IgnoranteController(0)
+    assert not sample(cycle, 1, 'annulla').move
+    assert not sample(cycle, 2, 'annulla').move
+    assert cycle.stage == 'searching'
+    for at in (3, 3.5):
+        assert not sample(cycle, at).move
+    assert sample(cycle, 4).move
+
+
+def test_start_in_match_or_missed_cancel_requires_two_playable_captures():
+    for clicked in (False, True):
+        cycle = IgnoranteController(0)
+        if clicked:
+            cycle.on_clicked('gioca', 0)
+        for at in (1, 2, 3):
+            assert not sample(cycle, at).move
+        assert not sample(cycle, 4, playable=True).move
+        assert sample(cycle, 5, playable=True).move
+        assert cycle.stage == 'playing'
+
+
+def test_brief_cancel_does_not_block_later_gameplay_confirmation():
+    cycle = IgnoranteController(0)
+    assert not sample(cycle, 1, 'annulla').move
+    assert not sample(cycle, 2, playable=True).move
+    assert sample(cycle, 3, playable=True).move
+
+
+def test_playable_hint_cannot_override_reward_or_menu():
+    for signals, blocked in [((), True), (('gioca',), False),
+                             (('posizione_finale',), False)]:
+        cycle = IgnoranteController(0)
+        for at in (1, 2, 3):
+            assert not sample(cycle, at, *signals, playable=True, blocked=blocked).move

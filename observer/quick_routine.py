@@ -12,6 +12,7 @@ from .models import Action
 @dataclass
 class QuickRoutine:
     seed: int | None = None
+    sustained: bool = False
     index: int = 0
     pickaxe_equipped: bool = False
     _direction: str = field(default='patrol_forward', init=False)
@@ -47,4 +48,7 @@ class QuickRoutine:
             name = self._rng.choice(choices)
             duration = 1.4 if name == 'patrol_forward' else 1.0
         self._direction = name
+        if self.sustained:
+            duration = (6.0 if name == 'patrol_forward' else
+                        4.0 if name in ('strafe_left', 'strafe_right') else 3.0)
         return Action(name, duration, reason='IGNORANTE: movimento fluido, salti e piccone')

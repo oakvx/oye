@@ -14,7 +14,7 @@ Per verificare il ciclo senza input reali, esegui `python -m pytest tests/test_i
 
 Le sezioni successive descrivono l'implementazione precedente e le relative verifiche.
 
-La sequenza della dashboard resta quella descritta in `IGNORANTE_V38.md`: osservazione di Gioca, eventuale clic autorizzato, conferma della scomparsa, attesa del caricamento, salti e routine. F8 mette in pausa, F9 ferma; Fortnite deve essere in primo piano.
+La sequenza della dashboard prevede: osservazione di Gioca, eventuale clic autorizzato, conferma della scomparsa, attesa del caricamento, salti e routine. F8 mette in pausa, F9 ferma; Fortnite deve essere in primo piano.
 
 L'OCR delle zone è asincrono e più lento dei fotogrammi. Una lettura positiva recente di Gioca può rimanere visibile al supervisore tra due letture, ma mantiene la data dello screenshot originale: **tre conferme richiedono tre letture distinte**. Coordinate scadute o una scena incompatibile non autorizzano il clic. Il numero di tentativi resta limitato e il comando inviato non prova che il gioco lo abbia ricevuto.
 

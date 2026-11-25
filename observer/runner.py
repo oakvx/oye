@@ -32,6 +32,7 @@ from .ignorante import FINAL_SIGNALS, MAX_FRAME_AGE, IgnoranteController
 from .ignorante_ocr import cycle_ocr_worker, match_frame, playable_scene, valid_capture
 from .quick_routine import QuickRoutine
 from .command_policy import CommandPolicy
+from .sustained_input import SustainedInput
 from .region_ocr import ScreenRegionOCRWorker
 from .screen_profiles import ScreenProfiles
 from .phase_gate import PhaseGate
@@ -456,7 +457,9 @@ class Runner:
                 info={'matches_completed': single.matches_completed, 'resume_pending': resume_gate.active})
         ignorante = (IgnoranteController(time.monotonic(), matches_completed=single.matches_completed)
                      if self.quick_start else None)
-        quick_routine = QuickRoutine(seed=self.seed) if ignorante else None
+        quick_routine = QuickRoutine(seed=self.seed, sustained=True) if ignorante else None
+        quick_input_phase = None
+        quick_bus_jump_at = float('-inf')
         command_policy = CommandPolicy(seed=self.seed, routine=quick_routine) if ignorante else None
         quick_ocr = None
         quick_frames = {}
@@ -466,7 +469,7 @@ class Runner:
         quick_report = None
         cycle_status = ignorante or single
         if ignorante is not None:
-            self._emit('single_match', 'Ignorante: attendo Gioca e Annulla prima del movimento. F8 pausa, F9 stop.')
+            self._emit('single_match', 'Ignorante: verifico Gioca, ricerca partita o partita già avviata. F8 pausa, F9 stop.')
             from .reward_ocr import ocr_available
             if not self.cfg['ocr_enabled'] or not ocr_available():
                 self._emit('ocr_notice', 'Ignorante attende la lettura dei pulsanti. Attiva OCR e verifica Tesseract.')
@@ -532,6 +535,9 @@ class Runner:
 
             driver = Driver(live=self.live, allowed=allowed_input, config=self.cfg,
                             stop=self.stop_event, paused=self.pause_event)
+            if ignorante is not None and self.live:
+                driver = SustainedInput(driver, allowed=lambda: (
+                    not self.stop_event.is_set() and not self.pause_event.is_set() and allowed_input()))
             def report_quick():
                 nonlocal quick_report
                 status = (ignorante.stage, ignorante.last_signal, ignorante.reason,
@@ -1245,6 +1251,7 @@ class Runner:
                         ignorante.stage in ('await_play', 'returning', 'lobby')):
                     if now - last_reward_ocr >= 2.0:
                         if self.reward_ocr.submit(frame, win.left, win.top, captured_at,
+                                                  ignorante.stage if ignorante else
                                                   single.stage if single else ''):
                             last_reward_ocr = now
                     reward = self.reward_ocr.take()
@@ -1337,8 +1344,8 @@ class Runner:
                         name = reward_verified.name
                         if name == 'riscatta':
                             # Never click a generic RISCATTA (e.g. in shop).
-                            # A distinct, recently confirmed reward title is
-                            # mandatory for the post-lobby claim.
+                            # A recently confirmed reward title or footer pair
+                            # is mandatory for the post-lobby claim.
                             permit = bool(reward_overlay_confirmed and not overlay.hold and
                                 ((single is not None and single.stage in
                                   ('post_lobby','claim_rewards','await_play')) or
@@ -1521,8 +1528,13 @@ class Runner:
                                 lobby_phase = ignorante.stage in ('await_play', 'lobby')
                                 reward_hold = lobby_phase and (reward_overlay_confirmed or reward_overlay_pending
                                                                or single.stage == 'claim_rewards')
+                                # A manual start may already be in matchmaking or
+                                # on the bus. Reward scanning gates lobby clicks,
+                                # not independently observed gameplay/queue entry.
+                                reward_check_needed = (lobby_phase and not observed.playable
+                                                       and 'annulla' not in observed.signals)
                                 if lobby_phase and not results_visible and (
-                                        reward_hold or not reward_scan_confirmed):
+                                        reward_hold or (reward_check_needed and not reward_scan_confirmed)):
                                     observed = replace(observed, buttons={}, blocked=True)
                                 offer = ignorante.observe(observed, now=time.monotonic())
                                 decision, menu_target = offer.action, offer.name
@@ -1564,7 +1576,8 @@ class Runner:
                                     if ignorante.stage == 'lobby' and single.stage == 'await_play':
                                         ignorante.lobby_ready(time.monotonic())
                                     ignorante.reason = decision.reason
-                                elif lobby_phase and not results_visible and not reward_scan_confirmed and observed.valid:
+                                elif (reward_check_needed and not results_visible
+                                      and not reward_scan_confirmed and observed.valid):
                                     ignorante.reason = 'Attendo due letture OCR delle ricompense'
                                     decision = Action('wait', reason=ignorante.reason)
                                 if offer.move:
@@ -1574,12 +1587,31 @@ class Runner:
                                     if newer_stop or overlay.hold:
                                         decision = ignorante.interrupt(captured_at, 'Nuova schermata da verificare').action
                                     else:
+                                        aerial_hint = result.phase_hint or source.phase_hint
+                                        if aerial_hint != quick_input_phase:
+                                            driver.release()
+                                            quick_input_phase = aerial_hint
+                                        if isinstance(driver, SustainedInput):
+                                            driver.renew(observed.at + MAX_FRAME_AGE)
                                         if not was_playing:
                                             quick_routine.reset()
                                         authorized = True
-                                        ground_hud = playable_scene(source) and source.phase_hint is None
-                                        if not was_playing:
+                                        ground_hud = playable_scene(source) and aerial_hint is None
+                                        if aerial_hint:
+                                            ignorante.last_signal = ('Bus: Spazio per saltare' if aerial_hint == 'battle_bus'
+                                                                     else 'Discesa: comando deltaplano visibile')
+                                        if isinstance(driver, SustainedInput) and driver.busy:
+                                            decision = Action('wait', reason='Sequenza continua in corso')
+                                        elif aerial_hint == 'battle_bus':
+                                            if now - quick_bus_jump_at >= 1.6:
+                                                quick_bus_jump_at = now
+                                                decision = Action('jump', .16, reason='Bus riconosciuto: salto')
+                                            else:
+                                                decision = Action('wait', reason='Attendo uscita dal bus')
+                                        elif not was_playing:
                                             decision = Action('jump', .16, reason=offer.action.reason)
+                                        elif aerial_hint == 'skydiving':
+                                            decision = Action('patrol_forward', 4., reason='Discesa: tengo avanti')
                                         elif ground_hud:
                                             decision = command_policy.choose(
                                                 scene='match', authorized=True, now=now,
@@ -1599,7 +1631,10 @@ class Runner:
                                 decision = Action('wait', reason='Schermata da verificare')
                             elif ignorante.stage == 'playing' and captured_at - quick_observed_at > 3:
                                 decision = ignorante.interrupt(ignorante.last_frame_at, 'Lettura OCR scaduta').action
-                            if decision.name == 'wait':
+                            keep_moving = (isinstance(driver, SustainedInput) and driver.busy
+                                           and ignorante.stage == 'playing' and not ignorante.resume_required
+                                           and not overlay.hold)
+                            if decision.name == 'wait' and not keep_moving:
                                 driver.release()
                             report_quick()
                             if (self.repeat_matches and (ignorante.stage != last_checkpoint_stage or
@@ -2113,7 +2148,7 @@ class Runner:
                         'motion_px': round(motion.pixels, 2) if motion and motion.reliable else None,
                     })
                     # Save the image BEFORE actual displacement, measure on next screenshot.
-                    if self.live and (decision.is_motion or decision.name in ('turn_left', 'turn_right')):
+                    if self.live and ignorante is None and (decision.is_motion or decision.name in ('turn_left', 'turn_right')):
                         before_action = frame.copy()
                         motion_action_name = decision.name
                     driver_started = time.perf_counter()
@@ -2122,6 +2157,8 @@ class Runner:
                     motion_action_ended_at = time.monotonic()
                     last_driver_feedback = ('Driver: comando inviato al sistema; ricezione nel gioco da verificare'
                                             if executed else 'Driver: comando non inviato')
+                    if executed and isinstance(driver, SustainedInput) and decision.seconds > 2:
+                        last_driver_feedback = 'Sequenza continua avviata; riconoscimento schermate attivo'
                     if not executed:
                         before_action = None
                         motion_action_name = None

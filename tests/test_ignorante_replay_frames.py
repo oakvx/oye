@@ -57,6 +57,7 @@ def test_three_match_replay_using_real_ocr(captures):
         assert pixels is not None, name
         scanned[name] = read_cycle_labels(pixels, 0)
         assert set(scanned[name].matches) == CASES[name][1], name
+    assert scanned['air'].phase_hint == 'skydiving'
     assert not is_reward_screen('DA RISCATTARE: 14 · OTTIENI IL PASS BATTAGLIA')
     assert not read_cycle_labels(np.zeros_like(captures['play']), 0).matches
     assert read_cycle_labels(np.zeros_like(captures['play']), 0).status == 'invalid_capture'
@@ -98,7 +99,8 @@ def test_three_match_replay_using_real_ocr(captures):
     assert 'annulla' not in commands
 
 
-def test_runner_dispatches_verified_targets_and_rechecks_after_pause(captures, tmp_path, monkeypatch):
+@pytest.mark.parametrize('entry', ['automatic', 'manual_queue', 'in_match'])
+def test_runner_dispatches_verified_targets_and_rechecks_after_pause(captures, tmp_path, monkeypatch, entry):
     import observer.runner as runtime
 
     config = tmp_path / 'config.json'
@@ -107,8 +109,11 @@ def test_runner_dispatches_verified_targets_and_rechecks_after_pause(captures, t
     save(config, cfg)
     runner = Runner(root=tmp_path, live=True, single_match=True, repeat_matches=True, quick_start=True)
     window = Window('FortniteClient-Win64-Shipping.exe', 50, 60, 1920, 1080)
-    sequence = iter(['play', 'play_2'] * 6 + ['queue', 'queue_2', 'queue_3']
-                    + ['air', 'air_2', 'air_3'] * 3 + ['elimination', 'results', 'results_2'])
+    prefix = (['play', 'play_2'] * 6 if entry == 'automatic' else [])
+    if entry != 'in_match':
+        prefix += ['queue', 'queue_2', 'queue_3']
+    sequence = iter(prefix + ['air', 'air_2', 'air_3'] * 3
+                    + ['elimination', 'results', 'results_2'])
     clock = 0.0
     current = ''
     commands = []
@@ -167,7 +172,8 @@ def test_runner_dispatches_verified_targets_and_rechecks_after_pause(captures, t
 
     class Rewards(Worker):
         def __init__(self, *args, **kwargs):
-            super().__init__(lambda at: RewardCandidate(at, None))
+            super().__init__(lambda at: RewardCandidate(
+                at, None, status='ok' if entry == 'automatic' else 'OCR unavailable'))
             self.previous = None
 
         def submit(self, frame, left, top, at, stage):
@@ -196,19 +202,23 @@ def test_runner_dispatches_verified_targets_and_rechecks_after_pause(captures, t
     monkeypatch.setattr(runtime, 'PhaseOCRWorker', lambda _: Worker(lambda at: PhaseOCRResult(at, 'ok')))
     monkeypatch.setattr(runtime, 'cycle_ocr_worker', lambda _: Worker(lambda at: replace(scanned[current], at=at)))
     monkeypatch.setattr(runner.stop_event, 'wait', wait)
-    monkeypatch.setattr(runner.vision, 'recognize', lambda *args: Reading('spectator', {}))
+    monkeypatch.setattr(runner.vision, 'recognize', lambda *args:
+        Reading('match', {}) if entry == 'in_match' and current.startswith('air')
+        else Reading('spectator', {}))
     runner._loop()
     events = list(runner.messages.queue)
     assert not [event for event in events if event['event'] == 'error']
     clicks = [(name, action.point) for name, _, action in commands if action.name == 'menu_click']
-    assert len(clicks) == 2
-    assert clicks[0][0] in ('play', 'play_2')
-    assert clicks[1][0] == 'results_2'
-    for (_, point), expected in zip(clicks, ((310, 972), (1630, 592))):
+    assert len(clicks) == (2 if entry == 'automatic' else 1)
+    if entry == 'automatic':
+        assert clicks[0][0] in ('play', 'play_2')
+    assert clicks[-1][0] == 'results_2'
+    expected_points = ((310, 972), (1630, 592)) if entry == 'automatic' else ((1630, 592),)
+    for (_, point), expected in zip(clicks, expected_points):
         assert max(abs(a-b) for a, b in zip(point, expected)) < 12
     assert released_while_paused
     moves = [(name, at) for name, at, action in commands if action.name != 'menu_click']
-    assert moves[0][0] == 'air_3'
+    assert moves[0][0] == ('air_2' if entry == 'in_match' else 'air_3')
     assert all(name.startswith('air') for name, _ in moves)
     assert moves[1][1] - paused_at >= 1.8 - 1e-6
     assert any(event.get('matches_completed') == 1 for event in events)
@@ -227,3 +237,33 @@ def test_play_label_requires_complete_text_and_correct_region():
         (tw, th), _ = cv2.getTextSize(label, font, 1.25, 3)
         cv2.putText(pixels, label, (x+(w-tw)//2, y+(h+th)//2), font, 1.25, (0, 0, 0), 3)
     assert set(read_cycle_labels(pixels, 1).matches) == {'gioca_di_nuovo'}
+
+
+@pytest.mark.skipif(not ocr_available(), reason='Richiede Tesseract')
+@pytest.mark.parametrize('label,expected', [('GIOCA', 'gioca'), ('ANNULLA', 'annulla')])
+def test_lobby_controls_without_white_rectangle(label, expected):
+    pixels = np.full((1080, 1920, 3), 40, dtype=np.uint8)
+    cv2.rectangle(pixels, (98, 870), (426, 950), (120, 65, 20), -1)
+    cv2.putText(pixels, label, (130, 925), cv2.FONT_HERSHEY_SIMPLEX,
+                1.3, (255, 255, 255), 3, cv2.LINE_AA)
+    result = read_cycle_labels(pixels, 1)
+    assert expected in result.matches
+    assert 100 < result.matches[expected].center[0] < 426
+    assert 870 < result.matches[expected].center[1] < 950
+
+
+@pytest.mark.skipif(not ocr_available(), reason='Richiede Tesseract')
+@pytest.mark.parametrize('label,expected', [
+    ('SPAZIO PER SALTARE', 'battle_bus'),
+    ('SPAZIO PER SCHIERARE ALI', 'skydiving'),
+    ('SALTA QUESTA OFFERTA', None),
+])
+def test_aerial_prompt_requires_complete_instruction(label, expected):
+    pixels = np.full((1080, 1920, 3), 40, dtype=np.uint8)
+    cv2.putText(pixels, label, (1080, 600), cv2.FONT_HERSHEY_SIMPLEX,
+                1., (255, 255, 255), 2, cv2.LINE_AA)
+    result = read_cycle_labels(pixels, 1)
+    assert result.phase_hint == expected
+    observation = match_frame(result, Reading('unknown', {}))
+    assert observation.playable == (expected is not None)
+    assert match_frame(result, Reading('unknown', {}), locked=True).blocked

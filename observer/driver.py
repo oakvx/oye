@@ -90,7 +90,7 @@ class Driver:
         Does not imply games using raw mouse input will accept moveRel. No low-level
         hooks or anti-cheat workarounds are attempted.
         """
-        duration = min(2.5, max(.15, float(action.seconds)))
+        duration = min(7., max(.15, float(action.seconds)))
         name = action.name
         turn = (-1 if name in ('patrol_look_left', 'patrol_weave_left')
                 else 1 if name in ('patrol_look_right', 'patrol_weave_right') else 0)
@@ -125,6 +125,15 @@ class Driver:
             for i in range(steps):
                 if not self.permitted():
                     break
+                if name == 'patrol_harvest' and duration > 2:
+                    # Repeated clicks while W stays held for the whole segment.
+                    firing = (i * duration / steps) % .6 < .18
+                    if firing != self.mouse_is_down:
+                        if firing:
+                            self.gui.mouseDown(button='left')
+                        else:
+                            self.gui.mouseUp(button='left')
+                        self.mouse_is_down = firing
                 if name == 'patrol_hop' and i == jump_start:
                     # Brief jump while W is still held. Release before the end
                     # of the segment; unconditional final release is a backstop.

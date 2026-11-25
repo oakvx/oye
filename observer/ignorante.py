@@ -208,12 +208,13 @@ class IgnoranteController:
             if self.streaks.get('gioca', (0, 0))[0] >= 2:
                 self.returned_to_lobby(frame.at)
             return self._wait('Verifico il ritorno alla lobby e le ricompense')
-        if self.stage in ('joining', 'requeue', 'searching') and cancel:
+        if self.stage in ('await_play', 'joining', 'requeue', 'searching') and cancel:
             self.cancel_seen = True
             if self.streaks['queue'][0] >= 2:
                 self.stage = 'searching'
             return self._wait('Annulla visibile: ricerca partita in corso')
-        if (self.stage == 'requeue' and not self.cancel_seen and
+        if ((self.stage in ('await_play', 'joining') or
+             (self.stage == 'requeue' and not self.cancel_seen)) and
                 self.streaks.get('playable', (0, 0))[0] >= 2):
             return self._enter()
         count, since = self.streaks.get('clear', (0, frame.at))

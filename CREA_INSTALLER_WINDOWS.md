@@ -1,13 +1,13 @@
-# Oye v40 — Build Windows e disinstallazione
+# Oye v44 — Build Windows e disinstallazione
 
-**L'archivio sorgente non è un installer compilato.** Per produrre `Oye-v40-Setup-Windows-x64.exe`:
+**L'archivio sorgente non è un installer compilato.** Per produrre `Oye-v44-Setup-Windows-x64.exe`:
 
 1. Su un PC Windows 10/11 x64 installa **Python 3.11+** e **Inno Setup 6** (servono soltanto sulla macchina che crea la build).
 2. Estrai tutto l'archivio, poi esegui `build_exe_windows.bat`.
-3. Se dipendenze e test sono corretti, l'installer viene creato in `release/Oye-v40-Setup-Windows-x64.exe`.
+3. Se dipendenze e test sono corretti, l'installer viene creato in `release/Oye-v44-Setup-Windows-x64.exe`.
 4. Distribuisci **solo l'installer**: chi lo apre non deve installare Python né eseguire `pip`.
 
-In alternativa, carica i file in un repository GitHub e avvia il workflow **Build Oye installer Windows** dalle Actions. L'artefatto sarà disponibile nella pagina della run.
+In alternativa, carica i file in un repository GitHub e avvia il workflow **Build Windows EXE** dalle Actions. L'artefatto sarà disponibile nella pagina della run.
 
 ## Installazione
 
